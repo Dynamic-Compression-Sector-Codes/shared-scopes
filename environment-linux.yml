@@ -1,0 +1,14 @@
+name: scope_control
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.12
+  - numpy
+  - scipy
+  - pyqtgraph
+  - pip
+  - pip:
+    - pyqt5
+    - pyvisa
+    - pyvisa-py
