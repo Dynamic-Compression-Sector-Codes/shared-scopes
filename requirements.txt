@@ -1,6 +1,0 @@
-numpy
-pyqt5
-pyvisa
-spyder-kernels
-pyqtgraph
-scipy
