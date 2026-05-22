@@ -7,6 +7,8 @@ set "YAML_FILE=environment.yml"
 set "SCRIPT_NAME=ScopeControl_V3.py"
 set "MARKER_FILE=.conda_env_installed.yml"
 set "SHORTCUT_PATH=%USERPROFILE%\Desktop\Scope Control v3.lnk"
+set "LOCAL_ICON_DIR=C:\ProgramData\ScopeControl\Icons"
+set "LOCAL_ICON=%LOCAL_ICON_DIR%\ScopeICO.ico"
 
 echo ===================================================
 echo             Scope Control Launcher
@@ -100,17 +102,11 @@ if not exist "%SHORTCUT_PATH%" (
     echo Creating a desktop shortcut for easy launching...
 
     :: Copy icon to a stable local path — Windows shortcuts require an absolute local path for icons
-    set "LOCAL_ICON_DIR=C:\ProgramData\ScopeControl\Icons"
-    set "LOCAL_ICON=%LOCAL_ICON_DIR%\ScopeICO.ico"
-    set "ICON_SOURCE=%~dp0ui\ScopeICO.ico"
+    if not exist "%LOCAL_ICON_DIR%" mkdir "%LOCAL_ICON_DIR%"
+    if exist "%~dp0ui\ScopeICO.ico" copy /Y "%~dp0ui\ScopeICO.ico" "%LOCAL_ICON%" >nul
 
-    if not exist "!LOCAL_ICON_DIR!" mkdir "!LOCAL_ICON_DIR!"
-    if exist "!ICON_SOURCE!" (
-        copy /Y "!ICON_SOURCE!" "!LOCAL_ICON!" >nul
-    )
-
-    if exist "!LOCAL_ICON!" (
-        powershell.exe -ExecutionPolicy Bypass -Command "& { $ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%SHORTCUT_PATH%'); $s.TargetPath = '%~f0'; $s.WorkingDirectory = '%~dp0'; $s.IconLocation = '!LOCAL_ICON!'; $s.Save() }"
+    if exist "%LOCAL_ICON%" (
+        powershell.exe -ExecutionPolicy Bypass -Command "& { $ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%SHORTCUT_PATH%'); $s.TargetPath = '%~f0'; $s.WorkingDirectory = '%~dp0'; $s.IconLocation = '%LOCAL_ICON%'; $s.Save() }"
     ) else (
         powershell.exe -ExecutionPolicy Bypass -Command "& { $ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%SHORTCUT_PATH%'); $s.TargetPath = '%~f0'; $s.WorkingDirectory = '%~dp0'; $s.Save() }"
     )
