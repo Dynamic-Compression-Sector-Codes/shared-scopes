@@ -221,7 +221,10 @@ class TektronixScope:
             self.rm = visa.ResourceManager()
         except Exception:
             self.rm = visa.ResourceManager('@py')
+            
+        if '.dll' not in repr(self.rm):
             print('NI-VISA not found, using pyvisa-py backend')
+
         try:
             self.scope = self.rm.open_resource(f'TCPIP0::{ip}::inst0::INSTR')
             self.scope.timeout = 10000
@@ -1358,12 +1361,14 @@ class OscApp(QtWidgets.QMainWindow):
             if not ip:
                 QtWidgets.QMessageBox.warning(self, "Scope", f"Could not resolve IP for {scope_name}")
                 return
-            self.show_scope_data(ip, [1, 2, 3, 4])
+            self.show_scope_data(ip, [1, 2, 3, 4], scope_name)
         except Exception as e:
             QtWidgets.QMessageBox.warning(self, "Waveform Error", f"{e}")
 
-    def show_scope_data(self, ip, channels):
-        dlg = QtWidgets.QProgressDialog("Fetching waveform…", "Cancel", 0, 0, self)
+    def show_scope_data(self, ip, channels, scope_name=""):
+        dlg = QtWidgets.QProgressDialog(
+            f"Fetching waveform{' from ' + scope_name if scope_name else ''}…",
+            "Cancel", 0, 0, self)
         dlg.setWindowTitle("Waveform")
         dlg.setWindowModality(QtCore.Qt.WindowModal)
         dlg.setMinimumDuration(0)
@@ -1375,6 +1380,7 @@ class OscApp(QtWidgets.QMainWindow):
         def on_finished(t, y_data, enabled_channels):
             dlg.close()
             viewer = ScopeViewer()
+            viewer.setWindowTitle(scope_name if scope_name else "Tektronix Oscilloscope Viewer")
             viewer.plot_data(t, y_data, enabled_channels)
             viewer.show()
             if not hasattr(self, '_waveform_viewers'):
