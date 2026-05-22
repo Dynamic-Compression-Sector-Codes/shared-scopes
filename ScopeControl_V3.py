@@ -61,9 +61,15 @@ class SelectScopesDialog(QtWidgets.QDialog):
         tbl.setRowCount(len(self.all_scopes))
 
         for r, (name, ip) in enumerate(self.all_scopes.items()):
-            tbl.setItem(r, 0, QtWidgets.QTableWidgetItem(name))
-            tbl.setItem(r, 1, QtWidgets.QTableWidgetItem(self.all_scopes_purpose.get(name, "")))
-            tbl.setItem(r, 2, QtWidgets.QTableWidgetItem(ip))
+            item_name = QtWidgets.QTableWidgetItem(name)
+            item_name.setFlags(item_name.flags() & ~QtCore.Qt.ItemIsEditable)
+            item_purpose = QtWidgets.QTableWidgetItem(self.all_scopes_purpose.get(name, ""))
+            item_purpose.setFlags(item_purpose.flags() & ~QtCore.Qt.ItemIsEditable)
+            item_ip = QtWidgets.QTableWidgetItem(ip)
+            item_ip.setFlags(item_ip.flags() & ~QtCore.Qt.ItemIsEditable)
+            tbl.setItem(r, 0, item_name)
+            tbl.setItem(r, 1, item_purpose)
+            tbl.setItem(r, 2, item_ip)
             btn = QtWidgets.QPushButton("Add " + name, self)
             btn.setEnabled(name not in self.selected)
             btn.clicked.connect(partial(self._add_scope, name))
@@ -92,15 +98,6 @@ class SelectScopesDialog(QtWidgets.QDialog):
             if self.table.item(r, 0).text() == name:
                 self.table.cellWidget(r, 3).setEnabled(False)
                 break
-
-    def get_ip_overrides(self):
-        overrides = {}
-        for r in range(self.table.rowCount()):
-            ni = self.table.item(r, 0)
-            ii = self.table.item(r, 2)
-            if ni and ii:
-                overrides[ni.text()] = ii.text().strip()
-        return overrides
 
     def exec_(self):
         super().exec_()
@@ -1061,7 +1058,6 @@ class OscApp(QtWidgets.QMainWindow):
             parent=self
         )
         new_selected = dlg.exec_()
-        self.scope_ips.update(dlg.get_ip_overrides())
         self.Sel_Scope_Names = new_selected
         self.scopes = {k: self.scope_ips[k] for k in self.scope_ips if k in self.Sel_Scope_Names}
         self.settings.setValue('scopes_selected', self.Sel_Scope_Names)

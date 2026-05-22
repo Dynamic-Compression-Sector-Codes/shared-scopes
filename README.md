@@ -188,7 +188,7 @@ Archive paths and platform definitions are configured in the `"archiving"` and `
 ## Troubleshooting
 
 **Scope shows as disconnected / `VI_ERROR_RSRC_NFOUND`**
-Check that the IP address in `scopes.json` is on the correct subnet for the machine running the app. Scopes may be reachable on `10.54.x.x` from some machines and `164.54.x.x` from others.
+Check that the IP address in `scopes.json` is correct and the scope is turned on. Scope IP will be visible on startup or through the LAN configuration menu.
 
 **App doesn't start after `git pull`**
 The `environment.yml` may have been updated. The launcher will detect this and update the Conda environment automatically — allow it to finish before relaunching.
