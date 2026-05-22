@@ -28,7 +28,16 @@ Before running the application, ensure the following are installed on your Windo
    ```
    Restart your terminal after running this.
 
-3. **Launch the application:**
+3. **Set up your scope configuration:**
+   Copy the included template and fill in your scope IPs:
+   ```
+   copy scopes.template.json scopes.json
+   ```
+   Then open `scopes.json` in any text editor and replace the placeholder IPs and scope names with your instruments. See [Scope Configuration](#scope-configuration) below for the full schema.
+
+   > **Back up your `scopes.json`** — this file is excluded from version control (gitignored) and will not be restored by `git pull`. Once configured, save a copy somewhere safe (a network share, cloud folder, or email it to yourself). If the file is lost you will need to re-enter all scope IPs manually.
+
+4. **Launch the application:**
    Double-click **`run-scope-control.bat`** in the repository folder.
 
 That's it. The launcher handles everything else automatically.
