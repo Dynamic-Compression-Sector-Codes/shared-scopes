@@ -6,7 +6,7 @@ set "ENV_NAME=scope_control"
 set "YAML_FILE=environment.yml"
 set "SCRIPT_NAME=ScopeControl_V3.py"
 set "MARKER_FILE=.conda_env_installed.yml"
-set "SHORTCUT_PATH=%USERPROFILE%\Desktop\ScopeControl.lnk"
+set "SHORTCUT_PATH=%USERPROFILE%\Desktop\Scope Control v3.lnk"
 
 echo ===================================================
 echo             Scope Control Launcher
@@ -107,7 +107,7 @@ if not exist "%SHORTCUT_PATH%" (
         powershell.exe -ExecutionPolicy Bypass -Command "& { $ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%SHORTCUT_PATH%'); $s.TargetPath = '%~f0'; $s.WorkingDirectory = '%~dp0'; $s.Save() }"
     )
     if !ERRORLEVEL! equ 0 (
-        echo Shortcut 'ScopeControl.lnk' created on Desktop.
+        echo Shortcut 'Scope Control v3.lnk' created on Desktop.
     )
     echo.
 )
