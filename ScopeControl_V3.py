@@ -957,6 +957,44 @@ class OscApp(QtWidgets.QMainWindow):
         RunSt_act.triggered.connect(self.SetRSEvent)
         commands_all_menu.addAction(RunSt_act)
 
+        help_menu = menubar.addMenu("Help")
+        manual_act = QtWidgets.QAction("Open Manual…", self)
+        manual_act.triggered.connect(self._open_manual)
+        help_menu.addAction(manual_act)
+        repo_act = QtWidgets.QAction("Open Repository…", self)
+        repo_act.triggered.connect(lambda: QtGui.QDesktopServices.openUrl(
+            QtCore.QUrl("https://github.com/Dynamic-Compression-Sector-Codes/shared-scopes")))
+        help_menu.addAction(repo_act)
+        help_menu.addSeparator()
+        about_act = QtWidgets.QAction("About…", self)
+        about_act.triggered.connect(self._show_about)
+        help_menu.addAction(about_act)
+
+    def _open_manual(self):
+        manual = Path(__file__).parent / "ui" / "manual.html"
+        if not manual.is_file():
+            QtWidgets.QMessageBox.warning(self, "Manual Not Found",
+                                          f"Could not find manual at:\n{manual}")
+            return
+        dlg = QtWidgets.QDialog(self)
+        dlg.setWindowTitle("ScopeControl Manual")
+        dlg.resize(820, 640)
+        browser = QtWidgets.QTextBrowser(dlg)
+        browser.setOpenExternalLinks(True)
+        browser.setSource(QtCore.QUrl.fromLocalFile(str(manual)))
+        layout = QtWidgets.QVBoxLayout(dlg)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(browser)
+        dlg.exec_()
+
+    def _show_about(self):
+        QtWidgets.QMessageBox.about(self, "About ScopeControl",
+            f"<b>DCS Oscilloscope Control</b><br>"
+            f"Version {self.version}<br><br>"
+            f"Multi-scope, multi-channel oscilloscope control<br>"
+            f"for Tektronix instruments over TCP/IP.<br><br>"
+            f"Dynamic Compression Sector — Argonne National Laboratory")
+
     # ── Central widget ───────────────────────────────────────────────────────
     def _build_central_widget(self):
         self.centralWidget = QtWidgets.QWidget()
@@ -1178,7 +1216,9 @@ class OscApp(QtWidgets.QMainWindow):
                     self.save_dir = self.user_dir_base
                     self.get_shot_dir()
             else:
+                self.cmbPlatform.blockSignals(True)
                 self.cmbPlatform.setCurrentIndex(code_to_idx.get(self.platform_name, 0))
+                self.cmbPlatform.blockSignals(False)
 
     def get_user_dir(self, new_dir=False):
         if not new_dir:

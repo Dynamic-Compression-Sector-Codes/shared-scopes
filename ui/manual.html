@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DCS Oscilloscope Control - User Manual</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #fff;
+            padding: 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #222;
+            margin-top: 0;
+            margin-bottom: 10px;
+            border-bottom: 3px solid #0066cc;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #0066cc;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            border-left: 4px solid #0066cc;
+            padding-left: 10px;
+        }
+        h3 {
+            color: #333;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        p {
+            margin-bottom: 15px;
+        }
+        code {
+            background-color: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+        }
+        pre {
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 15px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #f0f0f0;
+            color: #333;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #ddd;
+        }
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+        ul, ol {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        .note {
+            background-color: #e8f4f8;
+            border-left: 4px solid #0066cc;
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 2px;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border-left: 4px solid #ff9800;
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 2px;
+        }
+        .toc {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 4px;
+        }
+        .toc ul {
+            list-style: none;
+            margin-left: 0;
+        }
+        .toc li {
+            margin-bottom: 6px;
+        }
+        .toc a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<h1>DCS Oscilloscope Control - User Manual</h1>
+
+<div class="toc">
+    <h3>Contents</h3>
+    <ul>
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#quick-start">Quick Start</a></li>
+        <li><a href="#main-interface">Main Interface</a></li>
+        <li><a href="#selecting-scopes">Selecting Scopes</a></li>
+        <li><a href="#waveform-viewer">Waveform Viewer</a></li>
+        <li><a href="#scope-manager">Scope Manager</a></li>
+        <li><a href="#save-modes">Save Modes</a></li>
+        <li><a href="#configuration">Configuration Reference</a></li>
+        <li><a href="#troubleshooting">Troubleshooting</a></li>
+    </ul>
+</div>
+
+<h2 id="overview">Overview</h2>
+
+<p>DCS Oscilloscope Control is a Python application for monitoring, arming, and saving waveform data from multiple Tektronix oscilloscopes connected over TCP/IP. Built with PyQt5 and PyVISA, the application queries all selected scopes in parallel using threading, keeping the user interface responsive even while acquiring data from many instruments.</p>
+
+<p><strong>Key capabilities:</strong></p>
+<ul>
+    <li>Monitor connection status, trigger state, acquisition mode, and sample depth across multiple scopes simultaneously</li>
+    <li>View live waveforms with interactive controls (pan, zoom, decimation)</li>
+    <li>Arm scopes and send software triggers</li>
+    <li>Save waveform data in parallel from all active scopes</li>
+    <li>Manage scope configurations and presets via JSON</li>
+    <li>Support for advanced shot archiving to structured network directories</li>
+</ul>
+
+<h2 id="quick-start">Quick Start</h2>
+
+<h3>Installation & First Launch</h3>
+
+<ol>
+    <li><strong>Clone the repository:</strong>
+        <pre>git clone https://github.com/Dynamic-Compression-Sector-Codes/shared-scopes/
+cd shared-scopes</pre>
+    </li>
+    <li><strong>Initialize Conda (first time only):</strong>
+        <pre>conda init powershell</pre>
+        Restart your terminal after running this.
+    </li>
+    <li><strong>Set up your scope configuration:</strong>
+        <pre>copy scopes.template.json scopes.json</pre>
+        Open <code>scopes.json</code> in any text editor and enter your scope IP addresses, names, and purposes. See the <a href="#configuration">Configuration Reference</a> section for the full schema.
+        <div class="warning">
+            <strong>Important:</strong> Back up your <code>scopes.json</code> — this file is excluded from version control. If lost, you will need to re-enter all scope IPs and settings manually.
+        </div>
+    </li>
+    <li><strong>Launch the application:</strong>
+        Double-click <code>run-scope-control.bat</code> in the repository folder.
+    </li>
+</ol>
+
+<h3>What the Launcher Does</h3>
+
+<p>Every time you run <code>run-scope-control.bat</code>, it automatically:</p>
+<ul>
+    <li>Pulls the latest code from GitHub via <code>git pull</code></li>
+    <li>Searches for a Miniconda or Anaconda installation</li>
+    <li>Creates the <code>scope_control</code> Conda environment if needed, installing dependencies from <code>environment.yml</code></li>
+    <li>Detects changes to <code>environment.yml</code> and updates the environment automatically</li>
+    <li>Creates a shortcut on your Desktop for future launches</li>
+    <li>Activates the environment and starts the application</li>
+</ul>
+
+<h2 id="main-interface">Main Interface</h2>
+
+<h3>Toolbar Buttons</h3>
+
+<table>
+    <tr>
+        <th>Button</th>
+        <th>Action</th>
+    </tr>
+    <tr>
+        <td><strong>Update Table</strong></td>
+        <td>Queries all selected scopes in parallel. Retrieves trigger state, connection status, acquisition mode, record length, sample depth, and data width. Displays results in the table below.</td>
+    </tr>
+    <tr>
+        <td><strong>ARM Scopes</strong></td>
+        <td>Arms all selected scopes to wait for a trigger event. Shows a confirmation dialog because arming erases all data on the scopes.</td>
+    </tr>
+    <tr>
+        <td><strong>Save Scope Data</strong></td>
+        <td>Saves waveform data from all active scopes in parallel background threads. The GUI remains responsive while files are being written.</td>
+    </tr>
+</table>
+
+<h3>File Menu</h3>
+
+<table>
+    <tr>
+        <th>Menu Item</th>
+        <th>Action</th>
+    </tr>
+    <tr>
+        <td><strong>Set Directory…</strong></td>
+        <td>Choose the base folder where waveform files will be saved (standard save mode only).</td>
+    </tr>
+    <tr>
+        <td><strong>Set Filename…</strong></td>
+        <td>Set a custom base filename for saved waveforms. If not set, uses auto-generated names in archiving mode.</td>
+    </tr>
+    <tr>
+        <td><strong>Set Scope Configuration File…</strong></td>
+        <td>Browse and load a different JSON config file. The application reloads immediately with the new configuration.</td>
+    </tr>
+    <tr>
+        <td><strong>Edit Scope Configuration…</strong></td>
+        <td>Opens the Scope Manager dialog to add, edit, or delete scopes and save changes back to the active JSON file.</td>
+    </tr>
+</table>
+
+<h3>Scopes Menu</h3>
+
+<table>
+    <tr>
+        <th>Menu Item</th>
+        <th>Action</th>
+    </tr>
+    <tr>
+        <td><strong>Select Scopes…</strong></td>
+        <td>Opens the scope selector dialog to add or remove scopes from the active table. Use preset buttons for quick selection of common groups.</td>
+    </tr>
+</table>
+
+<h3>Commands Menu</h3>
+
+<table>
+    <tr>
+        <th>Menu Item</th>
+        <th>Action</th>
+    </tr>
+    <tr>
+        <td><strong>Send to All → Soft Trigger</strong></td>
+        <td>Sends a software trigger to all armed scopes. Shows a confirmation dialog.</td>
+    </tr>
+    <tr>
+        <td><strong>Send to All → Single Shot</strong></td>
+        <td>Sets all selected scopes to Single-Shot acquisition mode.</td>
+    </tr>
+    <tr>
+        <td><strong>Send to All → Run/Stop</strong></td>
+        <td>Sets all selected scopes to Run/Stop acquisition mode.</td>
+    </tr>
+</table>
+
+<h3>Scope Table Columns</h3>
+
+<table>
+    <tr>
+        <th>Column</th>
+        <th>Description</th>
+    </tr>
+    <tr>
+        <td><strong>Scope</strong></td>
+        <td>Scope name and its purpose (from config). Stretches to fill available width.</td>
+    </tr>
+    <tr>
+        <td><strong>Trigger</strong></td>
+        <td>Current trigger state: READY (green), SAVE (red), or ERROR (red). Color-coded in the cell background.</td>
+    </tr>
+    <tr>
+        <td><strong>Conn</strong></td>
+        <td>Connection status: Y (connected) or N (disconnected).</td>
+    </tr>
+    <tr>
+        <td><strong>Mode</strong></td>
+        <td>Acquisition mode: Single-Shot or Run-Stop.</td>
+    </tr>
+    <tr>
+        <td><strong>IP</strong></td>
+        <td>Last octet of the scope's IP address for quick identification.</td>
+    </tr>
+    <tr>
+        <td><strong>Range</strong></td>
+        <td>Data range (start-stop point): OK if data spans full record length, ERROR otherwise. Orange background = range issue.</td>
+    </tr>
+    <tr>
+        <td><strong>#Pts</strong></td>
+        <td>Record length (number of samples in the waveform).</td>
+    </tr>
+    <tr>
+        <td><strong>Bytes</strong></td>
+        <td>Bytes per sample: 1 (8-bit), 2 (12/16-bit), or higher.</td>
+    </tr>
+    <tr>
+        <td><strong>X</strong></td>
+        <td>Red X button: Click to remove the scope from the active table without deleting it from the config.</td>
+    </tr>
+</table>
+
+<h3>Table Row Colors</h3>
+
+<ul>
+    <li><strong>White:</strong> Normal operation</li>
+    <li><strong>Light gray:</strong> Query in progress</li>
+    <li><strong>Light orange:</strong> Connection error or range issue</li>
+    <li><strong>Light red:</strong> Acquisition mode error</li>
+</ul>
+
+<h3>Table Columns Resizing</h3>
+
+<p>All columns except the Scope column have preset widths. Drag any column header divider to resize. The Scope column automatically stretches to use remaining space, ensuring the table always spans the full window width.</p>
+
+<h2 id="selecting-scopes">Selecting Scopes</h2>
+
+<h3>Opening the Scope Selector</h3>
+
+<p>Click the <strong>Scopes → Select Scopes…</strong> menu item to open a dialog that lists all configured scopes.</p>
+
+<h3>Scope Selector Dialog</h3>
+
+<p>The dialog shows four columns:</p>
+<ul>
+    <li><strong>Scope:</strong> Name of the scope</li>
+    <li><strong>Purpose:</strong> Description from the config (e.g., "Timing Channel")</li>
+    <li><strong>IP:</strong> IP address</li>
+    <li><strong>Button Column:</strong> "Add [ScopeName]" button for each scope not yet selected</li>
+</ul>
+
+<p>Scopes that are already in the active table have their Add buttons disabled. Click the button to add a scope to the active table; the button immediately becomes disabled.</p>
+
+<h3>Preset Selection</h3>
+
+<p>At the top of the Scope Selector dialog is a <strong>Load Preset</strong> dropdown. Select any preset name (e.g., "Shot Config A") to automatically check all scopes in that preset and disable their Add buttons. Presets are defined in the <code>scopes.json</code> file.</p>
+
+<div class="note">
+    <strong>Note:</strong> The preset dropdown only appears if presets are defined in your configuration file.
+</div>
+
+<h3>Saving Scope Selection</h3>
+
+<p>When you close the Scope Selector dialog, your selected scopes are saved to the application settings and automatically restored on the next launch.</p>
+
+<h2 id="waveform-viewer">Waveform Viewer</h2>
+
+<h3>Opening a Waveform</h3>
+
+<p>Right-click any row in the scope table and select <strong>Show Current Waveform…</strong> to open an interactive plot of that scope's waveform data. The plot displays all enabled channels from that scope.</p>
+
+<h3>Interactive Controls</h3>
+
+<ul>
+    <li><strong>Pan:</strong> Click and drag the plot to pan left/right or up/down</li>
+    <li><strong>Zoom:</strong> Scroll to zoom in/out</li>
+    <li><strong>Decimate checkbox:</strong> Toggle data decimation to smooth large waveforms for faster rendering</li>
+    <li><strong>Decimation value:</strong> Text field specifying the target number of points to display. Enter a value (default 20000) and press Enter to update the plot</li>
+    <li><strong>Data Select Mode button:</strong> Toggle to enable point selection mode (see below)</li>
+    <li><strong>Legend:</strong> Color-coded list of channels in the upper right; check/uncheck to show/hide channels</li>
+</ul>
+
+<h3>Cursor Position</h3>
+
+<p>At the bottom of the waveform window, a label displays the current cursor position in the plot: (x-time, y-voltage).</p>
+
+<h3>Data Point Selection</h3>
+
+<p>Click the <strong>Data Select Mode</strong> button to enable point selection mode. In this mode:</p>
+<ul>
+    <li>Click on the plot to snap to the nearest data point on any visible curve</li>
+    <li>An X marker appears on the selected point</li>
+    <li>The point's exact coordinates are displayed in a tooltip near the marker</li>
+    <li>Click again to select a different point, or toggle the button off to exit selection mode</li>
+</ul>
+
+<h3>Decimation Behavior</h3>
+
+<p>When decimation is enabled, the application automatically reduces the number of displayed points to match your target value. This significantly speeds up rendering for very long waveforms (hundreds of thousands of samples) without losing critical data information.</p>
+
+<h2 id="scope-manager">Scope Manager</h2>
+
+<h3>Opening the Scope Manager</h3>
+
+<p>Go to <strong>File → Edit Scope Configuration…</strong> to open the Scope Manager dialog. This dialog lets you add, edit, and delete scope definitions directly in the application.</p>
+
+<h3>Scope Manager Dialog</h3>
+
+<p>The dialog displays a table with three columns:</p>
+<ul>
+    <li><strong>Name:</strong> Scope identifier (e.g., "Scope1", "Scope11")</li>
+    <li><strong>IP:</strong> IP address of the scope</li>
+    <li><strong>Purpose:</strong> Human-readable description (e.g., "Timing Channel", "Velocity")</li>
+</ul>
+
+<p>All cells are editable — click a cell to change its value.</p>
+
+<h3>Manager Buttons</h3>
+
+<table>
+    <tr>
+        <th>Button</th>
+        <th>Action</th>
+    </tr>
+    <tr>
+        <td><strong>Add Row</strong></td>
+        <td>Inserts a new scope row with placeholder values (ScopeNew, 0.0.0.0, empty purpose). Edit the values as needed.</td>
+    </tr>
+    <tr>
+        <td><strong>Delete Selected</strong></td>
+        <td>Removes the currently selected row (click a row to select it). The scope is deleted from the table but must be saved to persist the change.</td>
+    </tr>
+    <tr>
+        <td><strong>Open File…</strong></td>
+        <td>Opens the configuration file in your default text editor (enabled only if a config file is currently loaded).</td>
+    </tr>
+    <tr>
+        <td><strong>Reload from File</strong></td>
+        <td>Discards all edits and reloads the scope table from the active JSON file on disk. Use this to pick up external edits (enabled only if a config file is loaded).</td>
+    </tr>
+    <tr>
+        <td><strong>Save</strong></td>
+        <td>Applies your changes: rewrites the active configuration file with the updated scope list and closes the dialog.</td>
+    </tr>
+    <tr>
+        <td><strong>Cancel</strong></td>
+        <td>Closes the dialog without saving any changes.</td>
+    </tr>
+</table>
+
+<h3>Workflow</h3>
+
+<ol>
+    <li>Make edits to the scope table (add, modify, delete rows)</li>
+    <li>Click <strong>Save</strong> to write changes to the JSON file and apply them</li>
+    <li>The main window will rebuild its scope list and table automatically</li>
+</ol>
+
+<p>Alternatively, you can edit the JSON file directly in a text editor and click <strong>Reload from File</strong> to pick up the changes without restarting the application.</p>
+
+<h2 id="save-modes">Save Modes</h2>
+
+<p>The application supports two save workflows, depending on whether you have archiving enabled in your configuration.</p>
+
+<h3>Standard Save Mode</h3>
+
+<p>Used when <code>"archiving": { "enabled": false }</code> in your JSON config (or no archiving section is present).</p>
+
+<ul>
+    <li>Use <strong>File → Set Directory…</strong> to choose a save folder</li>
+    <li>Click <strong>Save Scope Data</strong> in the toolbar</li>
+    <li>All waveforms are saved as <code>.isf</code> (Tektronix binary format) files directly to your chosen directory</li>
+    <li>Files are named <code>{filename}_S{scope#}C{channel}.isf</code></li>
+    <li>If a file with the same name already exists, the app appends a number (<code>_1.isf</code>, <code>_2.isf</code>, etc.) to avoid overwriting</li>
+</ul>
+
+<h3>Advanced Shot/Platform Archiving Mode</h3>
+
+<p>Used when <code>"archiving": { "enabled": true }</code> in your JSON config. Designed for labs with a structured network archive.</p>
+
+<ul>
+    <li>The <strong>Platform</strong> dropdown appears in the main window toolbar</li>
+    <li>Select the active platform (e.g., "Gas Gun", "Laser") from the dropdown</li>
+    <li>The application automatically determines the next shot number based on existing folders in the archive</li>
+    <li>The shot name is auto-generated as <code>{YY}-{PLATFORM}-{SHOT#}</code> (e.g., "26-2-042")</li>
+    <li>Files are first staged to a user data directory, then copied to the central shot archive</li>
+    <li>Shot folders are created automatically in the archive on the first save</li>
+</ul>
+
+<p>Archive paths, platform definitions, and directory structures are configured in the <code>"archiving"</code> and <code>"platforms"</code> sections of the JSON config file.</p>
+
+<h2 id="configuration">Configuration Reference</h2>
+
+<h3>Configuration File Format</h3>
+
+<p>All application settings are stored in a JSON file (typically <code>scopes.json</code>). The file structure is as follows:</p>
+
+<pre>{
+  "app_title": "My Lab Oscilloscope Control",
+  "scopes": {
+    "Scope1": {
+      "ip": "192.168.1.10",
+      "purpose": "Timing Channel"
+    },
+    "Scope2": {
+      "ip": "192.168.1.11",
+      "purpose": "Velocity"
+    }
+  },
+  "presets": {
+    "Shot Config A": ["Scope1", "Scope2"],
+    "Shot Config B": ["Scope1"]
+  },
+  "platforms": [
+    {
+      "label": "Gas Gun",
+      "code": "1",
+      "subdir": "GG-1",
+      "dir_type": "gun"
+    },
+    {
+      "label": "100J Laser",
+      "code": "C",
+      "subdir": "ID-C",
+      "dir_type": "laser"
+    }
+  ],
+  "archiving": {
+    "enabled": false,
+    "engineering_drive": "//server/share/",
+    "gun_shot_data_path": "Shot Data",
+    "laser_shot_data_path": "Laser/Shot Data",
+    "user_data_path": "User_Data"
+  }
+}</pre>
+
+<h3>Schema Details</h3>
+
+<table>
+    <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Required</th>
+        <th>Description</th>
+    </tr>
+    <tr>
+        <td><code>app_title</code></td>
+        <td>string</td>
+        <td>No</td>
+        <td>Custom window title bar text. Defaults to "Oscilloscope Control".</td>
+    </tr>
+    <tr>
+        <td><code>scopes</code></td>
+        <td>object</td>
+        <td>Yes</td>
+        <td>Dictionary mapping scope names (e.g., "Scope1") to scope objects with <code>ip</code> and optional <code>purpose</code> fields.</td>
+    </tr>
+    <tr>
+        <td><code>scopes[name].ip</code></td>
+        <td>string</td>
+        <td>Yes</td>
+        <td>IPv4 address of the scope (e.g., "10.54.235.87").</td>
+    </tr>
+    <tr>
+        <td><code>scopes[name].purpose</code></td>
+        <td>string</td>
+        <td>No</td>
+        <td>Human-readable description of what the scope measures (e.g., "Timing Channel").</td>
+    </tr>
+    <tr>
+        <td><code>presets</code></td>
+        <td>object</td>
+        <td>No</td>
+        <td>Named groups of scope names for quick selection. Each preset is an array of scope names that exist in the <code>scopes</code> dictionary.</td>
+    </tr>
+    <tr>
+        <td><code>platforms</code></td>
+        <td>array</td>
+        <td>No (but required if archiving is enabled)</td>
+        <td>List of experimental platforms used for archiving. Each platform has <code>label</code>, <code>code</code>, <code>subdir</code>, and <code>dir_type</code>.</td>
+    </tr>
+    <tr>
+        <td><code>platforms[].label</code></td>
+        <td>string</td>
+        <td>Yes (if platforms list exists)</td>
+        <td>Display name (e.g., "Gas Gun (D)", "100J Laser (C)").</td>
+    </tr>
+    <tr>
+        <td><code>platforms[].code</code></td>
+        <td>string</td>
+        <td>Yes (if platforms list exists)</td>
+        <td>Platform identifier code used in shot naming (e.g., "1", "C", "2").</td>
+    </tr>
+    <tr>
+        <td><code>platforms[].subdir</code></td>
+        <td>string</td>
+        <td>Yes (if platforms list exists)</td>
+        <td>Subdirectory path relative to gun or laser base path (e.g., "ID-D-1").</td>
+    </tr>
+    <tr>
+        <td><code>platforms[].dir_type</code></td>
+        <td>string</td>
+        <td>Yes (if platforms list exists)</td>
+        <td>"gun" or "laser" — determines whether to use gun or laser archive path.</td>
+    </tr>
+    <tr>
+        <td><code>archiving.enabled</code></td>
+        <td>boolean</td>
+        <td>No</td>
+        <td>Enable advanced shot archiving workflow. Defaults to false.</td>
+    </tr>
+    <tr>
+        <td><code>archiving.engineering_drive</code></td>
+        <td>string</td>
+        <td>No (required if archiving is enabled)</td>
+        <td>UNC path to the engineering network share (e.g., "//164.54.235.60/Engineering").</td>
+    </tr>
+    <tr>
+        <td><code>archiving.gun_shot_data_path</code></td>
+        <td>string</td>
+        <td>No</td>
+        <td>Relative path to gun shot data within the engineering drive. Defaults to "Impact Facilities/Shot Data".</td>
+    </tr>
+    <tr>
+        <td><code>archiving.laser_shot_data_path</code></td>
+        <td>string</td>
+        <td>No</td>
+        <td>Relative path to laser shot data within the engineering drive. Defaults to "Laser Shock/Shot Data".</td>
+    </tr>
+    <tr>
+        <td><code>archiving.user_data_path</code></td>
+        <td>string</td>
+        <td>No</td>
+        <td>Relative path to user staging directory. Defaults to "User_Data".</td>
+    </tr>
+</table>
+
+<h3>Loading a Different Configuration File</h3>
+
+<p>Go to <strong>File → Set Scope Configuration File…</strong> and browse to any <code>.json</code> file on your local machine or network. The application reloads immediately with the new configuration, and the path is remembered for future launches.</p>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+
+<h3>Scope shows as disconnected or "VI_ERROR_RSRC_NFOUND"</h3>
+
+<p><strong>Cause:</strong> The IP address in <code>scopes.json</code> is incorrect, the scope is turned off, or the scope is on a different subnet than expected.</p>
+
+<p><strong>Solution:</strong></p>
+<ul>
+    <li>Verify the scope is powered on and connected to the network</li>
+    <li>Check the IP address on the scope's front panel or LAN configuration menu</li>
+    <li>Confirm that your computer can reach the scope's IP (ping test in command prompt)</li>
+    <li>If the scope has multiple network interfaces, check if it is on a different subnet (e.g., 164.54.235.x vs 10.54.235.x)</li>
+    <li>Update the IP in <code>scopes.json</code> via <strong>File → Edit Scope Configuration…</strong></li>
+</ul>
+
+<h3>Application doesn't start or crashes after "git pull"</h3>
+
+<p><strong>Cause:</strong> The <code>environment.yml</code> may have been updated, requiring a Conda environment rebuild.</p>
+
+<p><strong>Solution:</strong> The launcher automatically detects and applies <code>environment.yml</code> changes. Simply run the launcher again and allow it to complete the update. If the issue persists, delete the <code>scope_control</code> Conda environment and let the launcher recreate it:</p>
+
+<pre>conda env remove --name scope_control</pre>
+
+Then run the launcher again.
+
+<h3>Conda not found or "conda not recognized"</h3>
+
+<p><strong>Cause:</strong> Conda is not installed, or PowerShell cannot find it.</p>
+
+<p><strong>Solution:</strong></p>
+<ol>
+    <li>Ensure Miniconda or Anaconda is installed on your system</li>
+    <li>Run the following command in PowerShell once, then restart your terminal:
+        <pre>conda init powershell</pre>
+    </li>
+    <li>If conda is still not found, check that <code>conda.bat</code> is in your system PATH</li>
+</ol>
+
+<h3>Cannot save waveforms: "Cannot create save directory"</h3>
+
+<p><strong>Cause:</strong> The chosen save directory doesn't exist or you don't have write permissions.</p>
+
+<p><strong>Solution:</strong></p>
+<ul>
+    <li>Verify the directory path exists and is accessible</li>
+    <li>In archiving mode, check that the engineering drive path is correct and mounted</li>
+    <li>Use <strong>File → Set Directory…</strong> to choose a different directory</li>
+    <li>Ensure you have write permissions to the directory</li>
+</ul>
+
+<h3>Waveform data is incomplete or incorrect</h3>
+
+<p><strong>Cause:</strong> The scope's data range is not set correctly (not spanning the full record length).</p>
+
+<p><strong>Solution:</strong></p>
+<ul>
+    <li>Check the <strong>Range</strong> column in the scope table — if it shows "ERROR", the data window is not set to capture the full record</li>
+    <li>On the scope, use the DATA START and DATA STOP menu items to set the range to span the entire record length</li>
+    <li>Click <strong>Update Table</strong> to refresh the display</li>
+</ul>
+
+<h3>Save fails on some scopes but succeeds on others</h3>
+
+<p><strong>Cause:</strong> One or more scopes have disabled channels, timeout issues, or connection problems during the save operation.</p>
+
+<p><strong>Solution:</strong></p>
+<ul>
+    <li>Check the warning dialog at the end of the save operation for a list of failed scopes and channels</li>
+    <li>Verify that the failed scope is connected and armed</li>
+    <li>Enable the desired channels on each scope before saving</li>
+    <li>Try saving again; if the problem persists, try updating the table first to confirm connection</li>
+</ul>
+
+<h3>Scope Manager changes not appearing in the main window</h3>
+
+<p><strong>Cause:</strong> The Scope Manager dialog was not closed with the <strong>Save</strong> button, or the file was corrupted during save.</p>
+
+<p><strong>Solution:</strong></p>
+<ul>
+    <li>Open <strong>File → Edit Scope Configuration…</strong> again</li>
+    <li>Click <strong>Reload from File</strong> to discard unsaved edits and reload from disk</li>
+    <li>Make your changes and click <strong>Save</strong> (not Cancel)</li>
+    <li>The main window will automatically rebuild its table</li>
+</ul>
+
+<h3>Platform dropdown is missing</h3>
+
+<p><strong>Cause:</strong> Archiving is disabled in your configuration file.</p>
+
+<p><strong>Solution:</strong></p>
+<ul>
+    <li>If you want to use shot archiving, edit <code>scopes.json</code> and set <code>"archiving": { "enabled": true }</code></li>
+    <li>Ensure the <code>platforms</code> and <code>archiving</code> sections are properly configured</li>
+    <li>Go to <strong>File → Set Scope Configuration File…</strong> and reload the file, or restart the application</li>
+</ul>
+
+<h3>Cannot find engineering drive location</h3>
+
+<p><strong>Cause:</strong> The UNC path specified in <code>archiving.engineering_drive</code> is incorrect or the network share is not mounted.</p>
+
+<p><strong>Solution:</strong></p>
+<ul>
+    <li>Verify the UNC path is correct (e.g., "//server-name/share-name" or "//ip-address/share-name")</li>
+    <li>Try to access the path directly in File Explorer: press Win+R, type the path, and press Enter</li>
+    <li>If the share is not accessible, contact your network administrator</li>
+    <li>If prompted while changing platforms, click <strong>Set Engineering Drive Location</strong> to specify a different path</li>
+    <li>The application will remember the new path for future sessions</li>
+</ul>
+
+<h3>Waveform viewer window doesn't open</h3>
+
+<p><strong>Cause:</strong> The scope is not responding to waveform queries, or no channels are enabled on that scope.</p>
+
+<p><strong>Solution:</strong></p>
+<ul>
+    <li>Verify the scope is connected and has channels enabled</li>
+    <li>Click <strong>Update Table</strong> to refresh the connection status</li>
+    <li>Ensure the scope is armed and has acquired data (not in the middle of another operation)</li>
+    <li>Check the console output for detailed error messages</li>
+</ul>
+
+<hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+
+<p style="color: #666; font-size: 0.9em; margin-top: 30px;">
+    <strong>Document Version:</strong> 3.0 | <strong>Last Updated:</strong> May 2026
+</p>
+
+</body>
+</html>
