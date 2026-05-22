@@ -98,11 +98,19 @@ echo.
 :: 5. Create a desktop shortcut if it doesn't exist
 if not exist "%SHORTCUT_PATH%" (
     echo Creating a desktop shortcut for easy launching...
-    set "ICON_PATH=%~dp0ui\ScopeICO.ico"
-    if not exist "!ICON_PATH!" set "ICON_PATH="
-    
-    if defined ICON_PATH (
-        powershell.exe -ExecutionPolicy Bypass -Command "& { $ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%SHORTCUT_PATH%'); $s.TargetPath = '%~f0'; $s.WorkingDirectory = '%~dp0'; $s.IconLocation = '%~dp0ui\ScopeICO.ico'; $s.Save() }"
+
+    :: Copy icon to a stable local path — Windows shortcuts require an absolute local path for icons
+    set "LOCAL_ICON_DIR=C:\ProgramData\ScopeControl\Icons"
+    set "LOCAL_ICON=%LOCAL_ICON_DIR%\ScopeICO.ico"
+    set "ICON_SOURCE=%~dp0ui\ScopeICO.ico"
+
+    if not exist "!LOCAL_ICON_DIR!" mkdir "!LOCAL_ICON_DIR!"
+    if exist "!ICON_SOURCE!" (
+        copy /Y "!ICON_SOURCE!" "!LOCAL_ICON!" >nul
+    )
+
+    if exist "!LOCAL_ICON!" (
+        powershell.exe -ExecutionPolicy Bypass -Command "& { $ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%SHORTCUT_PATH%'); $s.TargetPath = '%~f0'; $s.WorkingDirectory = '%~dp0'; $s.IconLocation = '!LOCAL_ICON!'; $s.Save() }"
     ) else (
         powershell.exe -ExecutionPolicy Bypass -Command "& { $ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%SHORTCUT_PATH%'); $s.TargetPath = '%~f0'; $s.WorkingDirectory = '%~dp0'; $s.Save() }"
     )
