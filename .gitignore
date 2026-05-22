@@ -28,6 +28,9 @@ CLAUDE.md
 suggestions.md
 NOTES.md
 
+# Redundant with environment.yml (launcher uses conda only)
+requirements.txt
+
 # Legacy versions (V2 kept on main/legacy branches only)
 ScopeControl_V2_3.py
 ScopeControl_V2_4.py

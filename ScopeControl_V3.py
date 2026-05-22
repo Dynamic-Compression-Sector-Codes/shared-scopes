@@ -750,18 +750,25 @@ class OscApp(QtWidgets.QMainWindow):
                 self.config_path = ''
                 self._load_default_config()
 
-        # Init shared settings using path from config (falls back to local QSettings)
-        ini_path = QtCore.QDir.fromNativeSeparators(self.cfg_path) if self.cfg_path else ""
+        # Init shared settings: explicit path from config → sibling .ini next to scopes.json → registry
+        if self.cfg_path:
+            ini_path = QtCore.QDir.fromNativeSeparators(self.cfg_path)
+        elif self.config_path:
+            ini_path = QtCore.QDir.fromNativeSeparators(
+                str(Path(self.config_path).parent / "ScopeControl.ini")
+            )
+        else:
+            ini_path = ""
         if ini_path:
             self.sharedsettings = QtCore.QSettings(ini_path, QtCore.QSettings.IniFormat)
             if self.sharedsettings.status() != QtCore.QSettings.NoError:
                 self.sharedsettings = QtCore.QSettings('DCS', 'ScopeProgram')
-                print('Using local settings (network settings unavailable)')
+                print('Using local settings (shared .ini unavailable)')
             else:
-                print('Using Shared Network Settings')
+                print('Using shared settings:', ini_path)
         else:
             self.sharedsettings = QtCore.QSettings('DCS', 'ScopeProgram')
-            print('Using local settings (no shared_ini_path configured)')
+            print('Using local settings (no config file loaded)')
         print("Shared Settings file:", self.sharedsettings.fileName())
 
         self.save_dir = self.user_dir_base

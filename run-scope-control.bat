@@ -122,4 +122,4 @@ python "%SCRIPT_NAME%"
 echo.
 echo Application closed.
 echo.
-pause
+REM pause
