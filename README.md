@@ -8,7 +8,10 @@ A multi-scope, multi-channel oscilloscope control application built in Python us
 
 1. **Git** — used to clone the repository and pull updates automatically. Download from [git-scm.com](https://git-scm.com/).
 2. **Miniconda** or **Anaconda** — manages the Python environment and dependencies. Download from [docs.anaconda.com/miniconda](https://www.anaconda.com/download/success).
-3. **VISA Backend** *(optional, skip for now)* — NI-VISA or Keysight VISA for instrument communication. If no native VISA backend is found, the app falls back to the pure-Python `pyvisa-py` library automatically.
+3. **VISA Backend** *(optional but recommended)* — NI-VISA or Keysight VISA for instrument communication. If no native VISA backend is found, the app falls back to the pure-Python `pyvisa-py` library automatically. The native backend is significantly faster for large waveform transfers.
+   - **NI-VISA:** Download *NI-VISA* from [ni.com/visa](https://www.ni.com/en/support/downloads/drivers/download.ni-visa.html). Install the full driver (not the runtime-only package) so the DLL is available system-wide.
+   - **Keysight IO Libraries Suite** (alternative): [keysight.com/find/iosuite](https://www.keysight.com/find/iosuite)
+   - To verify which backend the app is using, run: `python -c "import visa; print(visa.ResourceManager().visalib)"` — a `.dll`/`.so` path means NI-VISA is active; `@py` means the pure-Python fallback is in use.
 
 ---
 

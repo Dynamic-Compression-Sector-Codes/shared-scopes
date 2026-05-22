@@ -311,6 +311,37 @@ class TektronixScope:
 
 
 # ---------------------------------------------------------------------------
+# Waveform fetch worker — runs TektronixScope in a thread pool thread
+# ---------------------------------------------------------------------------
+class WaveformWorkerSignals(QObject):
+    finished = pyqtSignal(object, object, object)  # t, y_data, enabled_channels
+    error    = pyqtSignal(str)
+
+
+class WaveformFetchWorker(QRunnable):
+    def __init__(self, ip, channels):
+        super().__init__()
+        self.ip       = ip
+        self.channels = channels
+        self.signals  = WaveformWorkerSignals()
+
+    @pyqtSlot()
+    def run(self):
+        try:
+            scope = TektronixScope(self.ip)
+            try:
+                if not scope.connected:
+                    self.signals.error.emit(f"Could not connect to {self.ip}")
+                    return
+                t, y_data, enabled_channels = scope.get_scope_data(self.channels)
+                self.signals.finished.emit(t, y_data, enabled_channels)
+            finally:
+                scope.close()
+        except Exception as e:
+            self.signals.error.emit(str(e))
+
+
+# ---------------------------------------------------------------------------
 # ScopeViewer — pyqtgraph waveform window (unchanged from V2_4)
 # ---------------------------------------------------------------------------
 class ScopeViewer(QMainWindow):
@@ -1332,17 +1363,31 @@ class OscApp(QtWidgets.QMainWindow):
             QtWidgets.QMessageBox.warning(self, "Waveform Error", f"{e}")
 
     def show_scope_data(self, ip, channels):
-        scope = TektronixScope(ip)
-        try:
-            if scope.connected:
-                t, y_data, enabled_channels = scope.get_scope_data(channels)
-                self.viewer = ScopeViewer()
-                self.viewer.plot_data(t, y_data, enabled_channels)
-                self.viewer.show()
-            else:
-                print('Cannot Connect')
-        finally:
-            scope.close()
+        dlg = QtWidgets.QProgressDialog("Fetching waveform…", "Cancel", 0, 0, self)
+        dlg.setWindowTitle("Waveform")
+        dlg.setWindowModality(QtCore.Qt.WindowModal)
+        dlg.setMinimumDuration(0)
+        dlg.setValue(0)
+        dlg.show()
+
+        worker = WaveformFetchWorker(ip, channels)
+
+        def on_finished(t, y_data, enabled_channels):
+            dlg.close()
+            viewer = ScopeViewer()
+            viewer.plot_data(t, y_data, enabled_channels)
+            viewer.show()
+            if not hasattr(self, '_waveform_viewers'):
+                self._waveform_viewers = []
+            self._waveform_viewers.append(viewer)
+
+        def on_error(msg):
+            dlg.close()
+            QtWidgets.QMessageBox.warning(self, "Waveform Error", msg)
+
+        worker.signals.finished.connect(on_finished)
+        worker.signals.error.connect(on_error)
+        self.threadpool.start(worker)
 
     # ── Command senders ──────────────────────────────────────────────────────
     def on_send_command(self):
