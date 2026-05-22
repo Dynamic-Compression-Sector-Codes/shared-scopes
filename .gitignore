@@ -1,0 +1,34 @@
+# Python
+*.pyc
+__pycache__/
+
+# Site-specific config — copy scopes.template.json → scopes.json and customize
+scopes.json
+scopes_in_use.txt
+
+# Test/debug output
+output.txt
+
+# Conda env marker
+.conda_env_installed.yml
+
+# Windows artifacts
+Thumbs.db
+*.lnk
+
+# Shared/network settings files
+*.ini
+
+# Claude Code internals
+.claude/settings.local.json
+CLAUDE.md
+
+# Internal project notes
+suggestions.md
+
+# Legacy versions (V2 kept on main/legacy branches only)
+ScopeControl_V2_3.py
+ScopeControl_V2_4.py
+dcs-scope-control.bat
+dcs-scope-control - 2.3.bat
+OLDenvironment.yml

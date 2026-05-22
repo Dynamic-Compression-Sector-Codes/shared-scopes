@@ -1,0 +1,37 @@
+{
+  "_readme": "Copy this file to scopes.json and fill in your scope IPs. scopes.json is gitignored.",
+
+  "scopes": {
+    "Scope1": {
+      "ip": "192.168.1.10",
+      "purpose": "Timing channel 1"
+    },
+    "Scope2": {
+      "ip": "192.168.1.11",
+      "purpose": "Timing channel 2"
+    }
+  },
+
+  "presets": {
+    "Default": ["Scope1", "Scope2"]
+  },
+
+  "platforms": [
+    {"label": "Platform A", "code": "A", "subdir": "PlatformA", "dir_type": "laser"},
+    {"label": "Platform B", "code": "B", "subdir": "PlatformB", "dir_type": "gun"}
+  ],
+
+  "archiving": {
+    "enabled": false,
+    "engineering_drive": "//fileserver/Engineering/",
+    "gun_shot_data_path": "Impact Facilities/Shot Data",
+    "laser_shot_data_path": "Laser Shock/Shot Data",
+    "user_data_path": "User_Data"
+  },
+
+  "settings": {
+    "shared_ini_path": ""
+  },
+
+  "app_title": "Oscilloscope Control"
+}
