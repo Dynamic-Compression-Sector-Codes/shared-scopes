@@ -859,9 +859,9 @@ class OscApp(QtWidgets.QMainWindow):
         gun_path                  = archiving.get("gun_shot_data_path",   "Impact Facilities/Shot Data")
         laser_path                = archiving.get("laser_shot_data_path", "Laser Shock/Shot Data")
         user_path                 = archiving.get("user_data_path",       "User_Data")
-        self.shot_dir_base        = os.path.join(self.engineering_drive, gun_path)
-        self.laser_dir_base       = os.path.join(self.engineering_drive, laser_path)
-        self.user_dir_base        = os.path.join(self.engineering_drive, user_path, self.year)
+        self.shot_dir_base        = '/'.join([self.engineering_drive.rstrip('/'), gun_path])
+        self.laser_dir_base       = '/'.join([self.engineering_drive.rstrip('/'), laser_path])
+        self.user_dir_base        = '/'.join([self.engineering_drive.rstrip('/'), user_path, self.year])
 
     @staticmethod
     def _default_platforms():
@@ -988,12 +988,16 @@ class OscApp(QtWidgets.QMainWindow):
         dlg.exec_()
 
     def _show_about(self):
+        cfg_line = (f"<br><br><small><b>Config:</b> {self.config_path}</small>"
+                    if self.config_path else
+                    "<br><br><small><b>Config:</b> (defaults — no file loaded)</small>")
         QtWidgets.QMessageBox.about(self, "About ScopeControl",
             f"<b>DCS Oscilloscope Control</b><br>"
             f"Version {self.version}<br><br>"
             f"Multi-scope, multi-channel oscilloscope control<br>"
             f"for Tektronix instruments over TCP/IP.<br><br>"
-            f"Dynamic Compression Sector — Argonne National Laboratory")
+            f"Dynamic Compression Sector — Argonne National Laboratory"
+            f"{cfg_line}")
 
     # ── Central widget ───────────────────────────────────────────────────────
     def _build_central_widget(self):
@@ -1143,7 +1147,15 @@ class OscApp(QtWidgets.QMainWindow):
             self.update_lower_table()
 
     def update_lower_table(self):
-        self.lblShotDir.setText(self.save_dir)
+        if self.save_dir and os.path.isdir(self.save_dir):
+            self.lblShotDir.setText(self.save_dir)
+            self.lblShotDir.setStyleSheet("")
+        elif not self.save_dir or (self.archiving_enabled and not self.engineering_drive):
+            self.lblShotDir.setText("(no directory configured)")
+            self.lblShotDir.setStyleSheet("color: gray;")
+        else:
+            self.lblShotDir.setText(f"{self.save_dir}  ⚠ not found")
+            self.lblShotDir.setStyleSheet("color: #c0392b;")
         self.lblShotName.setText(str(self.shot_name))
 
     # ── Platform / directory logic ───────────────────────────────────────────
@@ -1154,7 +1166,7 @@ class OscApp(QtWidgets.QMainWindow):
         self.get_shot_dir()
         print(self.shot_dir)
         self.shot_name = self.year[2:] + '-' + self.platform_name + '-' + str(self.shot_number).zfill(3)
-        curr_shot_dir = os.path.join(self.shot_dir, self.shot_name)
+        curr_shot_dir = '/'.join([self.shot_dir.rstrip('/'), self.shot_name])
         if not os.path.isdir(curr_shot_dir) and self.standard_name:
             os.makedirs(curr_shot_dir)
         if self.save_dir != self.user_dir_base:
@@ -1169,9 +1181,9 @@ class OscApp(QtWidgets.QMainWindow):
         subdir   = platform["subdir"]
         dir_type = platform.get("dir_type", "gun")
         if dir_type == "laser":
-            curr_shot_dir = os.path.join(self.laser_dir_base, subdir, self.year)
+            curr_shot_dir = '/'.join([self.laser_dir_base.rstrip('/'), subdir, self.year])
         else:
-            curr_shot_dir = os.path.join(self.shot_dir_base, subdir, self.year)
+            curr_shot_dir = '/'.join([self.shot_dir_base.rstrip('/'), subdir, self.year])
 
         code_to_idx = {p["code"]: i for i, p in enumerate(self.platforms_config)}
 
@@ -1210,9 +1222,9 @@ class OscApp(QtWidgets.QMainWindow):
                     gun_path   = archiving.get("gun_shot_data_path",   "Impact Facilities/Shot Data")
                     laser_path = archiving.get("laser_shot_data_path", "Laser Shock/Shot Data")
                     user_path  = archiving.get("user_data_path",       "User_Data")
-                    self.shot_dir_base  = os.path.join(self.engineering_drive, gun_path)
-                    self.laser_dir_base = os.path.join(self.engineering_drive, laser_path)
-                    self.user_dir_base  = os.path.join(self.engineering_drive, user_path, self.year)
+                    self.shot_dir_base  = '/'.join([self.engineering_drive.rstrip('/'), gun_path])
+                    self.laser_dir_base = '/'.join([self.engineering_drive.rstrip('/'), laser_path])
+                    self.user_dir_base  = '/'.join([self.engineering_drive.rstrip('/'), user_path, self.year])
                     self.save_dir = self.user_dir_base
                     self.get_shot_dir()
             else:
@@ -1232,7 +1244,7 @@ class OscApp(QtWidgets.QMainWindow):
         self.update_lower_table()
 
     def create_dir(self):
-        self.save_dir_lower = os.path.join(self.save_dir, self.shot_name)
+        self.save_dir_lower = '/'.join([self.save_dir.rstrip('/'), self.shot_name])
         if not os.path.isdir(self.save_dir_lower) and self.save_dir != self.user_dir_base and self.standard_name:
             os.makedirs(self.save_dir_lower)
 
