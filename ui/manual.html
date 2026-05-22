@@ -139,7 +139,12 @@
     <h3>Contents</h3>
     <ul>
         <li><a href="#overview">Overview</a></li>
-        <li><a href="#quick-start">Quick Start</a></li>
+        <li><a href="#quick-start">Quick Start</a>
+            <ul>
+                <li><a href="#windows-setup">Windows</a></li>
+                <li><a href="#linux-mac-setup">Linux &amp; macOS</a></li>
+            </ul>
+        </li>
         <li><a href="#main-interface">Main Interface</a></li>
         <li><a href="#selecting-scopes">Selecting Scopes</a></li>
         <li><a href="#waveform-viewer">Waveform Viewer</a></li>
@@ -166,7 +171,7 @@
 
 <h2 id="quick-start">Quick Start</h2>
 
-<h3>Installation & First Launch</h3>
+<h3 id="windows-setup">Windows</h3>
 
 <ol>
     <li><strong>Clone the repository:</strong>
@@ -189,17 +194,39 @@ cd shared-scopes</pre>
     </li>
 </ol>
 
-<h3>What the Launcher Does</h3>
+<p>Every time you run <code>run-scope-control.bat</code>, it automatically pulls the latest code, checks for environment changes, creates a Desktop shortcut on first run, and starts the application.</p>
 
-<p>Every time you run <code>run-scope-control.bat</code>, it automatically:</p>
-<ul>
-    <li>Pulls the latest code from GitHub via <code>git pull</code></li>
-    <li>Searches for a Miniconda or Anaconda installation</li>
-    <li>Creates the <code>scope_control</code> Conda environment if needed, installing dependencies from <code>environment.yml</code></li>
-    <li>Detects changes to <code>environment.yml</code> and updates the environment automatically</li>
-    <li>Creates a shortcut on your Desktop for future launches</li>
-    <li>Activates the environment and starts the application</li>
-</ul>
+<h3 id="linux-mac-setup">Linux &amp; macOS</h3>
+
+<ol>
+    <li><strong>Clone the repository:</strong>
+        <pre>git clone https://github.com/Dynamic-Compression-Sector-Codes/shared-scopes/
+cd shared-scopes</pre>
+    </li>
+    <li><strong>Install Miniconda</strong> if not already installed, then initialize it for your shell <em>(first time only)</em>:
+        <pre>conda init bash</pre>
+        Restart your terminal after running this.
+    </li>
+    <li><strong>Set up your scope configuration:</strong>
+        <pre>cp scopes.template.json scopes.json</pre>
+        Edit <code>scopes.json</code> with your scope IPs and names.
+        <div class="warning">
+            <strong>Important:</strong> Back up your <code>scopes.json</code> — this file is excluded from version control and will not be restored by <code>git pull</code>.
+        </div>
+    </li>
+    <li><strong>Make the launcher executable</strong> <em>(first time only)</em>:
+        <pre>chmod +x run-scope-control.sh</pre>
+    </li>
+    <li><strong>Launch the application:</strong>
+        <pre>bash run-scope-control.sh</pre>
+    </li>
+</ol>
+
+<p>Every time you run <code>run-scope-control.sh</code>, it automatically pulls the latest code, checks for environment changes, and starts the application. On first run it also creates a launcher shortcut — a <code>.desktop</code> entry on Linux, or a <code>ScopeControl.app</code> bundle in <code>~/Applications/</code> on macOS.</p>
+
+<div class="note">
+    <strong>macOS — network shares:</strong> Archiving mode paths must point to a locally mounted share. Mount via Finder &#8594; Go &#8594; Connect to Server, then set <code>engineering_drive</code> in <code>scopes.json</code> to the <code>/Volumes/&#8230;</code> mount path rather than a UNC path.
+</div>
 
 <h2 id="main-interface">Main Interface</h2>
 
@@ -766,6 +793,44 @@ Then run the launcher again.
     <li>Click <strong>Update Table</strong> to refresh the connection status</li>
     <li>Ensure the scope is armed and has acquired data (not in the middle of another operation)</li>
     <li>Check the console output for detailed error messages</li>
+</ul>
+
+<h3>Linux/macOS: conda.sh not found</h3>
+
+<p><strong>Cause:</strong> Conda was installed to a non-standard location, or <code>conda init bash</code> has not been run.</p>
+
+<p><strong>Solution:</strong></p>
+<ul>
+    <li>Run <code>conda init bash</code> once after installing Miniconda/Anaconda, then restart your terminal</li>
+    <li>Verify the install location with <code>conda info --base</code> — confirm that <code>etc/profile.d/conda.sh</code> exists under that path</li>
+    <li>The launcher searches common paths including Homebrew locations on macOS; if yours differs, source it manually to confirm it works before filing a bug</li>
+</ul>
+
+<h3>Linux: application window does not appear</h3>
+
+<p><strong>Cause:</strong> PyQt5 may not be able to connect to the display server.</p>
+
+<p><strong>Solution:</strong></p>
+<ul>
+    <li>Ensure you are running in a graphical session (not a headless SSH session)</li>
+    <li>If connecting via SSH with X forwarding, use <code>ssh -X</code> or <code>ssh -Y</code> and ensure X11 is running locally</li>
+    <li>On Wayland, try setting <code>QT_QPA_PLATFORM=xcb</code> before running: <code>QT_QPA_PLATFORM=xcb bash run-scope-control.sh</code></li>
+</ul>
+
+<h3>macOS: "unidentified developer" or app won't open</h3>
+
+<p><strong>Cause:</strong> Gatekeeper blocks apps not signed with an Apple developer certificate.</p>
+
+<p><strong>Solution:</strong> Right-click <code>ScopeControl.app</code> &#8594; Open &#8594; Open anyway. This is a one-time bypass and only needs to be done once.</p>
+
+<h3>macOS: archiving mode paths not found</h3>
+
+<p><strong>Cause:</strong> UNC paths (<code>//server/share/</code>) are not directly accessible on macOS — network shares must be explicitly mounted first.</p>
+
+<p><strong>Solution:</strong></p>
+<ul>
+    <li>Mount the share via Finder &#8594; Go &#8594; Connect to Server (&#8984;K), or <code>mount_smbfs //server/share /Volumes/share</code> from Terminal</li>
+    <li>Set <code>"engineering_drive"</code> in <code>scopes.json</code> to the mounted path, e.g. <code>/Volumes/Engineering/</code></li>
 </ul>
 
 <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">

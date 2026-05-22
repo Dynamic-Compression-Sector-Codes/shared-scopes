@@ -6,8 +6,6 @@ A multi-scope, multi-channel oscilloscope control application built in Python us
 
 ## Prerequisites
 
-Before running the application, ensure the following are installed on your Windows machine:
-
 1. **Git** — used to clone the repository and pull updates automatically. Download from [git-scm.com](https://git-scm.com/).
 2. **Miniconda** or **Anaconda** — manages the Python environment and dependencies. Download from [docs.anaconda.com/miniconda](https://www.anaconda.com/download/success).
 3. **VISA Backend** *(optional, skip for now)* — NI-VISA or Keysight VISA for instrument communication. If no native VISA backend is found, the app falls back to the pure-Python `pyvisa-py` library automatically.
@@ -15,6 +13,8 @@ Before running the application, ensure the following are installed on your Windo
 ---
 
 ## Installation & First Launch
+
+### Windows
 
 1. **Clone the repository:**
    ```
@@ -42,7 +42,7 @@ Before running the application, ensure the following are installed on your Windo
 
 That's it. The launcher handles everything else automatically.
 
-### What the Launcher Does
+### What the Launcher Does (Windows)
 
 Every time `run-scope-control.bat` is run, it:
 
@@ -52,6 +52,52 @@ Every time `run-scope-control.bat` is run, it:
 - Detects changes to `environment.yml` on subsequent runs and updates the environment automatically if needed.
 - Creates a **ScopeControl shortcut on your Desktop** on the first run — use that shortcut for future launches instead of navigating to the folder each time.
 - Activates the environment and starts the application.
+
+---
+
+### Linux / macOS
+
+1. **Clone the repository:**
+   ```
+   git clone https://github.com/Dynamic-Compression-Sector-Codes/shared-scopes/
+   cd shared-scopes
+   ```
+
+2. **Install Miniconda** if not already installed, then initialize it for your shell *(first time only)*:
+   ```
+   conda init bash
+   ```
+   Restart your terminal after running this.
+
+3. **Set up your scope configuration** (same as Windows):
+   ```
+   cp scopes.template.json scopes.json
+   ```
+   Edit `scopes.json` with your scope IPs and names.
+
+4. **Make the launcher executable** *(first time only)*:
+   ```
+   chmod +x run-scope-control.sh
+   ```
+
+5. **Launch the application:**
+   ```
+   bash run-scope-control.sh
+   ```
+
+### What the Launcher Does (Linux / macOS)
+
+Every time `run-scope-control.sh` is run, it:
+
+- Pulls the latest code from GitHub.
+- Searches common Miniconda/Anaconda install locations for the conda shell hook.
+- Creates the `scope_control` Conda environment from `environment-linux.yml` if it doesn't exist.
+- Detects changes to `environment-linux.yml` and updates the environment automatically.
+- **Linux:** Creates a `.desktop` shortcut in `~/.local/share/applications/` on first run.
+- **macOS:** Creates a `ScopeControl.app` bundle in `~/Applications/` on first run — drag it to the Dock to pin it.
+- Activates the environment and starts the application.
+
+> **macOS note:** Network shares (for archiving mode) must be mounted manually before launching — they appear under `/Volumes/` rather than as UNC paths. Set the engineering drive path in your `scopes.json` to the mounted path, e.g. `/Volumes/Engineering/`.
 
 ---
 
@@ -198,7 +244,20 @@ Ensure Miniconda or Anaconda is installed and that `conda.bat` is accessible. Th
 
 **Conda environment creation fails / `conda` not recognized in the launcher**
 Run the following once from a terminal after installing Miniconda/Anaconda, then restart your terminal:
+- Windows: `conda init powershell`
+- Linux/macOS: `conda init bash`
+
+This registers Conda with your shell so the launcher can activate environments correctly.
+
+**Linux/macOS: `conda.sh` not found**
+The launcher searches common install paths automatically. If it still fails, find your conda base and source it manually to confirm it works:
 ```
-conda init powershell
+conda info --base   # shows the base path
+source <base>/etc/profile.d/conda.sh
 ```
-This registers Conda with PowerShell so the launcher can activate environments correctly.
+
+**macOS: app won't open / "unidentified developer"**
+Right-click `ScopeControl.app` → Open → Open anyway. This is a one-time Gatekeeper bypass for apps not from the App Store.
+
+**macOS: archiving mode paths not found**
+Network shares must be mounted before launching. Mount via Finder → Go → Connect to Server, then set your `engineering_drive` in `scopes.json` to the `/Volumes/...` mount path.
