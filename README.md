@@ -26,6 +26,7 @@ A multi-scope, multi-channel oscilloscope control application built in Python us
    ```
 
 2. **Initialize Conda for your terminal** *(first time only)*:
+  Inside a miniconda3 terminal (*e.g.*, Anaconda Prompt (miniconda3)):
    ```
    conda init powershell
    ```
