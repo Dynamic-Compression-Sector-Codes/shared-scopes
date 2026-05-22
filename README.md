@@ -2,6 +2,8 @@
 
 A multi-scope, multi-channel oscilloscope control application built in Python using PyQt5 and PyVISA. Monitor, arm, trigger, view, and save waveform data from multiple Tektronix oscilloscopes in parallel.
 
+![ScopeControl main window](ui/display.png)
+
 ---
 
 ## Prerequisites
