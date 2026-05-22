@@ -9,7 +9,7 @@ A multi-scope, multi-channel oscilloscope control application built in Python us
 Before running the application, ensure the following are installed on your Windows machine:
 
 1. **Git** — used to clone the repository and pull updates automatically. Download from [git-scm.com](https://git-scm.com/).
-2. **Miniconda** or **Anaconda** — manages the Python environment and dependencies. Download from [docs.anaconda.com/miniconda](https://docs.anaconda.com/miniconda/).
+2. **Miniconda** or **Anaconda** — manages the Python environment and dependencies. Download from [docs.anaconda.com/miniconda](https://www.anaconda.com/download/success).
 3. **VISA Backend** *(optional but recommended)* — NI-VISA or Keysight VISA for instrument communication. If no native VISA backend is found, the app falls back to the pure-Python `pyvisa-py` library automatically.
 
 ---
@@ -18,11 +18,17 @@ Before running the application, ensure the following are installed on your Windo
 
 1. **Clone the repository:**
    ```
-   git clone https://github.com/brad-ley/shock-scopes.git
-   cd shock-scopes
+   git clone https://github.com/Dynamic-Compression-Sector-Codes/shared-scopes/
+   cd shared-scopes
    ```
 
-2. **Launch the application:**
+2. **Initialize Conda for your terminal** *(first time only)*:
+   ```
+   conda init powershell
+   ```
+   Restart your terminal after running this.
+
+3. **Launch the application:**
    Double-click **`run-scope-control.bat`** in the repository folder.
 
 That's it. The launcher handles everything else automatically.
@@ -180,3 +186,10 @@ The `environment.yml` may have been updated. The launcher will detect this and u
 
 **Conda not found**
 Ensure Miniconda or Anaconda is installed and that `conda.bat` is accessible. The launcher checks several standard installation paths and falls back to searching `PATH`.
+
+**Conda environment creation fails / `conda` not recognized in the launcher**
+Run the following once from a terminal after installing Miniconda/Anaconda, then restart your terminal:
+```
+conda init powershell
+```
+This registers Conda with PowerShell so the launcher can activate environments correctly.

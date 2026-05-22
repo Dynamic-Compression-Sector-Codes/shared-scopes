@@ -19,7 +19,8 @@ Thumbs.db
 # Shared/network settings files
 *.ini
 
-# Claude Code internals
+# Editor and Claude Code internals
+.vscode/
 .claude/settings.local.json
 CLAUDE.md
 
