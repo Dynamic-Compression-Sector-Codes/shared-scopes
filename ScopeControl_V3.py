@@ -151,10 +151,14 @@ class ScopeManagerDialog(QtWidgets.QDialog):
         save_btn.clicked.connect(self.accept)
         cancel_btn = QtWidgets.QPushButton("Cancel")
         cancel_btn.clicked.connect(self.reject)
+        settings_btn = QtWidgets.QPushButton("Settings…")
+        settings_btn.setToolTip("Edit app title, presets, platforms, and archiving settings")
+        settings_btn.clicked.connect(self._open_settings)
         btn_row.addWidget(add_btn)
         btn_row.addWidget(del_btn)
         btn_row.addWidget(open_btn)
         btn_row.addWidget(reload_btn)
+        btn_row.addWidget(settings_btn)
         btn_row.addStretch()
         btn_row.addWidget(save_btn)
         btn_row.addWidget(cancel_btn)
@@ -191,6 +195,11 @@ class ScopeManagerDialog(QtWidgets.QDialog):
         if r >= 0:
             self.tbl.removeRow(r)
 
+    def _open_settings(self):
+        dlg = ConfigSettingsDialog(self.config, parent=self)
+        if dlg.exec_() == QtWidgets.QDialog.Accepted:
+            self._extra_config = dlg.get_updated_config()
+
     def get_updated_scopes(self):
         scopes = {}
         for r in range(self.tbl.rowCount()):
@@ -200,6 +209,157 @@ class ScopeManagerDialog(QtWidgets.QDialog):
             if name:
                 scopes[name] = {"ip": ip, "purpose": purp}
         return scopes
+
+    def get_extra_config(self):
+        return getattr(self, '_extra_config', {})
+
+
+# ---------------------------------------------------------------------------
+# Config settings dialog — edit app_title, presets, platforms, archiving
+# ---------------------------------------------------------------------------
+class ConfigSettingsDialog(QtWidgets.QDialog):
+    def __init__(self, config, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Configuration Settings")
+        self.config = config
+        self._build_ui()
+        self.resize(620, 520)
+
+    def _build_ui(self):
+        layout = QtWidgets.QVBoxLayout(self)
+        tabs = QtWidgets.QTabWidget()
+
+        # ── General ──────────────────────────────────────────────────────────
+        gen = QtWidgets.QWidget()
+        gl = QtWidgets.QFormLayout(gen)
+        gl.setContentsMargins(12, 12, 12, 12)
+        self.title_edit = QtWidgets.QLineEdit(self.config.get("app_title", ""))
+        gl.addRow("App Title:", self.title_edit)
+        tabs.addTab(gen, "General")
+
+        # ── Presets ───────────────────────────────────────────────────────────
+        pre = QtWidgets.QWidget()
+        pl = QtWidgets.QVBoxLayout(pre)
+        self.presets_tbl = QtWidgets.QTableWidget()
+        self.presets_tbl.setColumnCount(2)
+        self.presets_tbl.setHorizontalHeaderLabels(["Preset Name", "Scopes (comma-separated)"])
+        self.presets_tbl.verticalHeader().setVisible(False)
+        presets = self.config.get("presets", {})
+        self.presets_tbl.setRowCount(len(presets))
+        for r, (name, scopes) in enumerate(presets.items()):
+            self.presets_tbl.setItem(r, 0, QtWidgets.QTableWidgetItem(name))
+            self.presets_tbl.setItem(r, 1, QtWidgets.QTableWidgetItem(", ".join(scopes)))
+        self.presets_tbl.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+        pl.addWidget(self.presets_tbl)
+        pr = QtWidgets.QHBoxLayout()
+        add_p = QtWidgets.QPushButton("Add")
+        add_p.clicked.connect(lambda: self._add_row(self.presets_tbl, ["New Preset", ""]))
+        del_p = QtWidgets.QPushButton("Delete Selected")
+        del_p.clicked.connect(lambda: self._del_row(self.presets_tbl))
+        pr.addWidget(add_p); pr.addWidget(del_p); pr.addStretch()
+        pl.addLayout(pr)
+        tabs.addTab(pre, "Presets")
+
+        # ── Platforms ─────────────────────────────────────────────────────────
+        pla = QtWidgets.QWidget()
+        ptl = QtWidgets.QVBoxLayout(pla)
+        self.platforms_tbl = QtWidgets.QTableWidget()
+        self.platforms_tbl.setColumnCount(4)
+        self.platforms_tbl.setHorizontalHeaderLabels(["Label", "Code", "Subdir", "Type"])
+        self.platforms_tbl.verticalHeader().setVisible(False)
+        platforms = self.config.get("platforms", [])
+        self.platforms_tbl.setRowCount(len(platforms))
+        for r, p in enumerate(platforms):
+            self.platforms_tbl.setItem(r, 0, QtWidgets.QTableWidgetItem(p.get("label",    "")))
+            self.platforms_tbl.setItem(r, 1, QtWidgets.QTableWidgetItem(p.get("code",     "")))
+            self.platforms_tbl.setItem(r, 2, QtWidgets.QTableWidgetItem(p.get("subdir",   "")))
+            self.platforms_tbl.setItem(r, 3, QtWidgets.QTableWidgetItem(p.get("dir_type", "gun")))
+        self.platforms_tbl.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+        ptl.addWidget(self.platforms_tbl)
+        type_note = QtWidgets.QLabel("Type must be 'gun' or 'laser'")
+        type_note.setStyleSheet("color: gray; font-size: 11px;")
+        ptl.addWidget(type_note)
+        ptr = QtWidgets.QHBoxLayout()
+        add_pt = QtWidgets.QPushButton("Add")
+        add_pt.clicked.connect(lambda: self._add_row(self.platforms_tbl, ["New Platform", "", "", "gun"]))
+        del_pt = QtWidgets.QPushButton("Delete Selected")
+        del_pt.clicked.connect(lambda: self._del_row(self.platforms_tbl))
+        ptr.addWidget(add_pt); ptr.addWidget(del_pt); ptr.addStretch()
+        ptl.addLayout(ptr)
+        tabs.addTab(pla, "Platforms")
+
+        # ── Archiving ─────────────────────────────────────────────────────────
+        arc = QtWidgets.QWidget()
+        al = QtWidgets.QFormLayout(arc)
+        al.setContentsMargins(12, 12, 12, 12)
+        arch = self.config.get("archiving", {})
+        self.arch_enabled = QtWidgets.QCheckBox()
+        self.arch_enabled.setChecked(arch.get("enabled", False))
+        al.addRow("Enabled:", self.arch_enabled)
+        self.arch_drive = QtWidgets.QLineEdit(arch.get("engineering_drive",    ""))
+        al.addRow("Engineering Drive:", self.arch_drive)
+        self.arch_gun   = QtWidgets.QLineEdit(arch.get("gun_shot_data_path",   ""))
+        al.addRow("Gun Shot Data Path:", self.arch_gun)
+        self.arch_laser = QtWidgets.QLineEdit(arch.get("laser_shot_data_path", ""))
+        al.addRow("Laser Shot Data Path:", self.arch_laser)
+        self.arch_user  = QtWidgets.QLineEdit(arch.get("user_data_path",       ""))
+        al.addRow("User Data Path:", self.arch_user)
+        tabs.addTab(arc, "Archiving")
+
+        layout.addWidget(tabs)
+
+        btns = QtWidgets.QHBoxLayout()
+        ok_btn = QtWidgets.QPushButton("OK")
+        ok_btn.clicked.connect(self.accept)
+        cancel_btn = QtWidgets.QPushButton("Cancel")
+        cancel_btn.clicked.connect(self.reject)
+        btns.addStretch()
+        btns.addWidget(ok_btn)
+        btns.addWidget(cancel_btn)
+        layout.addLayout(btns)
+
+    @staticmethod
+    def _add_row(tbl, defaults):
+        r = tbl.rowCount()
+        tbl.insertRow(r)
+        for c, val in enumerate(defaults):
+            tbl.setItem(r, c, QtWidgets.QTableWidgetItem(val))
+
+    @staticmethod
+    def _del_row(tbl):
+        r = tbl.currentRow()
+        if r >= 0:
+            tbl.removeRow(r)
+
+    def get_updated_config(self):
+        presets = {}
+        for r in range(self.presets_tbl.rowCount()):
+            name = (self.presets_tbl.item(r, 0) or QtWidgets.QTableWidgetItem("")).text().strip()
+            raw  = (self.presets_tbl.item(r, 1) or QtWidgets.QTableWidgetItem("")).text()
+            if name:
+                presets[name] = [s.strip() for s in raw.split(",") if s.strip()]
+
+        platforms = []
+        for r in range(self.platforms_tbl.rowCount()):
+            label = (self.platforms_tbl.item(r, 0) or QtWidgets.QTableWidgetItem("")).text().strip()
+            code  = (self.platforms_tbl.item(r, 1) or QtWidgets.QTableWidgetItem("")).text().strip()
+            subdir= (self.platforms_tbl.item(r, 2) or QtWidgets.QTableWidgetItem("")).text().strip()
+            dtype = (self.platforms_tbl.item(r, 3) or QtWidgets.QTableWidgetItem("gun")).text().strip()
+            if label:
+                platforms.append({"label": label, "code": code, "subdir": subdir, "dir_type": dtype})
+
+        return {
+            "app_title": self.title_edit.text().strip(),
+            "presets":   presets,
+            "platforms": platforms,
+            "archiving": {
+                "enabled":               self.arch_enabled.isChecked(),
+                "engineering_drive":     self.arch_drive.text().strip(),
+                "gun_shot_data_path":    self.arch_gun.text().strip(),
+                "laser_shot_data_path":  self.arch_laser.text().strip(),
+                "user_data_path":        self.arch_user.text().strip(),
+            },
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -1126,10 +1286,12 @@ class OscApp(QtWidgets.QMainWindow):
         dlg = ScopeManagerDialog(self._config, config_path=self.config_path, parent=self)
         if dlg.exec_() == QtWidgets.QDialog.Accepted:
             self._config["scopes"] = dlg.get_updated_scopes()
+            for key, val in dlg.get_extra_config().items():
+                self._config[key] = val
             if self.config_path:
                 self._save_config(self.config_path)
             self._apply_config()
-            self._rebuild_scope_selection()
+            self._rebuild_after_config_load()
             self.update_table()
 
     # ── Scope selector dialog ────────────────────────────────────────────────
