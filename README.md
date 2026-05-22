@@ -10,7 +10,7 @@ Before running the application, ensure the following are installed on your Windo
 
 1. **Git** — used to clone the repository and pull updates automatically. Download from [git-scm.com](https://git-scm.com/).
 2. **Miniconda** or **Anaconda** — manages the Python environment and dependencies. Download from [docs.anaconda.com/miniconda](https://www.anaconda.com/download/success).
-3. **VISA Backend** *(optional but recommended)* — NI-VISA or Keysight VISA for instrument communication. If no native VISA backend is found, the app falls back to the pure-Python `pyvisa-py` library automatically.
+3. **VISA Backend** *(optional, skip for now)* — NI-VISA or Keysight VISA for instrument communication. If no native VISA backend is found, the app falls back to the pure-Python `pyvisa-py` library automatically.
 
 ---
 
