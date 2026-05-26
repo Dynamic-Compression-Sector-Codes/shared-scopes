@@ -8,6 +8,7 @@ import ctypes
 import sys
 import time
 import json
+import threading
 import numpy as np
 import pyvisa as visa
 import os
@@ -728,7 +729,11 @@ class ScopeQueryWorker(QRunnable):
 
             def q(cmd):
                 try:
-                    return oscope.query(cmd).strip()
+                    resp = oscope.query(cmd).strip()
+                    # Strip SCPI header prefix if present (e.g. ":HORIZONTAL:RECORDLENGTH 5000000" → "5000000")
+                    if ' ' in resp:
+                        resp = resp.split()[-1]
+                    return resp
                 except Exception as qe:
                     if scope_connection_diagnostic_outputs:
                         print(f"  {self.scope_name} '{cmd}': {type(qe).__name__}: {qe}")
@@ -738,6 +743,11 @@ class ScopeQueryWorker(QRunnable):
             data['state']  = q('ACQuire:STOPAFTER?')
             start          = q('DATa:START?')
             stop           = q('DATa:STOP?')
+            # Strip any SCPI header prefix (e.g. ":DATA:START 1 " → "1")
+            if ' ' in start:
+                start = start.split()[-1]
+            if ' ' in stop:
+                stop = stop.split()[-1]
             data['range']  = f"{start} - {stop}"
             data['length'] = q('HORizontal:RECOrdlength?')
             width          = q('DATa:WIDTH?')
@@ -767,20 +777,32 @@ class SaveWorkerSignals(QObject):
 
 
 class ScopeSaveWorker(QRunnable):
-    def __init__(self, scope_name, ip, shot_name, save_dir, app):
+    def __init__(self, scope_name, ip, shot_name, save_dir, app, cancel_event):
         super().__init__()
-        self.scope_name = scope_name
-        self.ip         = ip
-        self.shot_name  = shot_name
-        self.save_dir   = save_dir
-        self.app        = app
-        self.signals    = SaveWorkerSignals()
+        self.scope_name   = scope_name
+        self.ip           = ip
+        self.shot_name    = shot_name
+        self.save_dir     = save_dir
+        self.app          = app
+        self.cancel_event = cancel_event
+        self.signals      = SaveWorkerSignals()
 
     @pyqtSlot()
     def run(self):
-        # Query enabled channels via SELect? (item 4); fall back to CH1-4
+        # Each save worker gets its own ResourceManager so a prior VI_ERROR_TMO
+        # on the shared RM can't corrupt this session.
+        # Do NOT call local_rm.close() — NI-VISA shares the underlying library
+        # session across all RM instances; closing one invalidates them all.
+        local_rm = visa.ResourceManager()
+
+        def _local_open(ip, timeout=5000, open_timeout=2000):
+            rsrc = local_rm.open_resource(f"TCPIP::{ip}::INSTR", open_timeout=open_timeout)
+            rsrc.timeout = timeout
+            return rsrc
+
+        # Query enabled channels via SELect?; fall back to CH1-4
         try:
-            with self.app._open(self.ip) as oscope:
+            with _local_open(self.ip) as oscope:
                 sel = oscope.query('SELect?').strip()
                 matches = re.findall(r'CH(\d+)\s+([01])', sel)
                 channels = [int(ch) for ch, st in matches if st == '1'] or [1, 2, 3, 4]
@@ -791,8 +813,11 @@ class ScopeSaveWorker(QRunnable):
         failures = []
         scope_num = self.scope_name.strip('Scope')
         for ch in channels:
-            fname  = f"{self.shot_name}_S{scope_num}C{ch}.isf"
-            result = self.app.savedata(self.ip, ch, fname, save_dir=self.save_dir)
+            if self.cancel_event.is_set():
+                break
+            fname  = f"{self.shot_name}__S{scope_num}C{ch}.isf"
+            result = self.app.savedata(self.ip, ch, fname, save_dir=self.save_dir,
+                                       rm=local_rm, cancel_event=self.cancel_event)
             if result == 1:
                 failures.append(f"{self.scope_name} Ch {ch}")
         self.signals.finished.emit(self.scope_name, failures)
@@ -1075,6 +1100,39 @@ class OscApp(QtWidgets.QMainWindow):
         except Exception as e:
             QtWidgets.QMessageBox.warning(self, "Save Error", f"Could not save config:\n{e}")
 
+    def _save_as_preset(self):
+        selected = list(self.Sel_Scope_Names)
+        if not selected:
+            QtWidgets.QMessageBox.information(self, "Save Preset", "No scopes are currently selected.")
+            return
+
+        name, ok = QtWidgets.QInputDialog.getText(
+            self, "Save Current Selection as Preset",
+            "Preset name (will be uppercased):"
+        )
+        if not ok or not name.strip():
+            return
+
+        name = name.strip().upper()
+        presets = self._config.setdefault("presets", {})
+
+        if name in presets:
+            reply = QtWidgets.QMessageBox.question(
+                self, "Overwrite Preset?",
+                f'Preset "{name}" already exists.\nOverwrite it with the current selection?',
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+            )
+            if reply != QtWidgets.QMessageBox.Yes:
+                return
+
+        presets[name] = sorted(selected)
+        if self.config_path and os.path.isfile(self.config_path):
+            self._save_config(self.config_path)
+        QtWidgets.QMessageBox.information(
+            self, "Preset Saved",
+            f'Preset "{name}" saved with {len(selected)} scope(s).'
+        )
+
     def _load_config_file_dialog(self):
         path, _ = QtWidgets.QFileDialog.getOpenFileName(
             self, "Load Scope Configuration",
@@ -1122,6 +1180,9 @@ class OscApp(QtWidgets.QMainWindow):
         set_name_act = QtWidgets.QAction("Set Filename…", self)
         set_name_act.triggered.connect(self.get_custom_name)
         file_menu.addAction(set_name_act)
+        save_preset_act = QtWidgets.QAction("Save Current Selection as Preset…", self)
+        save_preset_act.triggered.connect(self._save_as_preset)
+        file_menu.addAction(save_preset_act)
         file_menu.addSeparator()
         load_cfg_act = QtWidgets.QAction("Set Scope Configuration File…", self)
         load_cfg_act.triggered.connect(self._load_config_file_dialog)
@@ -1328,8 +1389,9 @@ class OscApp(QtWidgets.QMainWindow):
         menu.exec_(self.table.viewport().mapToGlobal(point))
 
     # ── Utility ──────────────────────────────────────────────────────────────
-    def _open(self, ip, timeout=3000, open_timeout=1500):
-        rsrc = self.rm.open_resource(f"TCPIP::{ip}::INSTR", open_timeout=open_timeout)
+    def _open(self, ip, timeout=3000, open_timeout=1500, rm=None):
+        _rm = rm if rm is not None else self.rm
+        rsrc = _rm.open_resource(f"TCPIP::{ip}::INSTR", open_timeout=open_timeout)
         rsrc.timeout = timeout
         return rsrc
 
@@ -1430,7 +1492,8 @@ class OscApp(QtWidgets.QMainWindow):
 
     def get_user_dir(self, new_dir=False):
         if not new_dir:
-            new_dir = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select User Data Directory')
+            start = self.save_dir if (self.save_dir and os.path.isdir(self.save_dir)) else str(Path(__file__).parent)
+            new_dir = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select User Data Directory', start)
         if new_dir:
             self.save_dir = new_dir
             self.sharedsettings.setValue('save_dir', new_dir)
@@ -1682,10 +1745,15 @@ class OscApp(QtWidgets.QMainWindow):
         self.update_table()
         time.sleep(0.1)
 
-        # Resolve save directory once in the main thread to avoid races
+        # Resolve save directory once in the main thread to avoid races.
+        # Mirrors V2_4 logic: if a custom staging dir is set (save_dir_lower != user_dir_base),
+        # save there first and let copy_user_to_gun copy to the shot archive.
+        # Otherwise save directly to the shot archive folder.
         if self.standard_name:
-            save_dir = os.path.join(self.shot_dir, self.shot_name)
-            self.save_dir_lower = save_dir
+            save_dir = self.save_dir_lower
+            if save_dir == self.user_dir_base:
+                save_dir = '/'.join([self.shot_dir.rstrip('/'), self.shot_name])
+                self.save_dir_lower = save_dir
             try:
                 os.makedirs(save_dir, exist_ok=True)
             except OSError as e:
@@ -1695,37 +1763,77 @@ class OscApp(QtWidgets.QMainWindow):
         else:
             save_dir = self.save_dir
 
-        self._save_total    = len(self.scopes)
-        self._save_done     = 0
-        self._save_failures = []
+        self._save_total     = len(self.scopes)
+        self._save_done      = 0
+        self._save_failures  = []
+        self._save_cancel    = threading.Event()
+        self._save_remaining = set(self.scopes.keys())
 
         if self._save_total == 0:
             self._finalize_save()
             return
 
+        scope_list = "\n  ".join(sorted(self._save_remaining, key=natural_sort_key))
+        initial_label = "Saved 0 of %d scopes\n\nSaving:\n  %s" % (self._save_total, scope_list)
+        self._save_progress = QtWidgets.QProgressDialog(
+            initial_label, "Cancel", 0, self._save_total, self)
+        self._save_progress.setWindowTitle("Saving Waveforms")
+        self._save_progress.setWindowModality(QtCore.Qt.WindowModal)
+        self._save_progress.setMinimumDuration(0)
+        self._save_progress.setMinimumWidth(320)
+        self._save_progress.setAutoClose(False)
+        self._save_progress.setAutoReset(False)
+        self._save_progress.canceled.connect(self._cancel_save)
+        self._save_progress.setValue(0)
+        self._save_progress.show()
+
         for scope_name, ip in self.scopes.items():
-            worker = ScopeSaveWorker(scope_name, ip, self.shot_name, save_dir, self)
+            worker = ScopeSaveWorker(scope_name, ip, self.shot_name, save_dir, self,
+                                     self._save_cancel)
             worker.signals.finished.connect(self._on_scope_save_done)
             self.threadpool.start(worker)
+
+    def _cancel_save(self):
+        self._save_cancel.set()
+        # Close immediately so setValue() calls from finishing workers don't re-show the dialog.
+        if hasattr(self, '_save_progress') and self._save_progress:
+            self._save_progress.close()
+            self._save_progress = None
 
     @pyqtSlot(str, list)
     def _on_scope_save_done(self, scope_name, failures):
         self._save_failures.extend(failures)
         self._save_done += 1
+        self._save_remaining.discard(scope_name)
+        if hasattr(self, '_save_progress') and self._save_progress:
+            self._save_progress.setValue(self._save_done)
+            if self._save_remaining:
+                scope_list = "\n  ".join(sorted(self._save_remaining, key=natural_sort_key))
+                label = "Saved %d of %d scopes\n\nStill saving:\n  %s" % (
+                    self._save_done, self._save_total, scope_list)
+            else:
+                label = "Saved %d of %d scopes" % (self._save_done, self._save_total)
+            self._save_progress.setLabelText(label)
         if self._save_done == self._save_total:
             self._finalize_save()
 
     def _finalize_save(self):
+        if hasattr(self, '_save_progress') and self._save_progress:
+            self._save_progress.close()
+            self._save_progress = None
+        cancelled = hasattr(self, '_save_cancel') and self._save_cancel.is_set()
         print("Done saving data! %s" % datetime.datetime.now().strftime("%I:%M%p (%m/%d/%y)"))
         if self._save_failures:
             failstr = "***These Scopes/Channels did not save!***:\n" + "\n".join(self._save_failures)
             QtWidgets.QMessageBox.warning(self, "Save Failures", failstr)
+        if cancelled:
+            return
         if self.standard_name and self.archiving_enabled:
             print('Copying to shots directory...')
             self.copy_user_to_gun(update_shot=True)
             print('Done copying to shots directory!')
 
-    def savedata(self, IP, channel, filename, save_dir=None):
+    def savedata(self, IP, channel, filename, save_dir=None, rm=None, cancel_event=None):
         """Save one channel to .isf. Returns 0=success, 1=IO failure, 2=channel not enabled."""
         if save_dir is None:
             # Legacy synchronous path — resolve from instance state
@@ -1748,8 +1856,10 @@ class OscApp(QtWidgets.QMainWindow):
                 updated_filename = updated_filename[:-(4 + len(str(increment - 1)))] + str(increment) + '.isf'
 
         for attempt in range(5):
+            if cancel_event is not None and cancel_event.is_set():
+                return 1
             try:
-                with self._open(IP) as oscope:
+                with self._open(IP, rm=rm) as oscope:
                     cht = oscope.query('SELect:CH%s?' % channel).strip()
                     print(cht)
                     # Strip header prefix if scope has headers on (e.g. ":SELECT:CH1 1")
@@ -1780,7 +1890,7 @@ class OscApp(QtWidgets.QMainWindow):
                                      "WFMPre:BN_Fmt?", "WFMPre:BYT_Or?", "WFMPre:WFId?",
                                      "WFMPre:NR_PT?", "WFMPre:PT_FMT?", "WFMPre:XUNIT?",
                                      "WFMPre:XINCR?", "WFMPre:XZERO?", "WFMPre:PT_OFF?",
-                                     "WFMPre:YUNIT", "WFMPre:YMUL?", "WFMPre:YOFF?", "WFMPre:YZERO?"]
+                                     "WFMPre:YUNIT?", "WFMPre:YMUL?", "WFMPre:YOFF?", "WFMPre:YZERO?"]
                         for each in lstChecks:
                             try:
                                 ask = oscope.query(each)

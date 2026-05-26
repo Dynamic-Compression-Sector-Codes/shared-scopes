@@ -186,6 +186,7 @@ Two options:
 |---|---|
 | **Set Directory…** | Choose the base folder where waveform files are saved. |
 | **Set Filename…** | Set a custom base filename for saved waveforms. |
+| **Save Current Selection as Preset…** | Saves the currently active scope selection as a named preset in the JSON config file. The name is automatically uppercased. If a preset with that name already exists, you'll be asked to confirm overwrite. |
 | **Set Scope Configuration File…** | Load a different `.json` config file. |
 | **Edit Scope Configuration…** | Open the Scope Manager dialog. |
 
