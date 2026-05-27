@@ -1316,6 +1316,11 @@ class OscApp(QtWidgets.QMainWindow):
         self.lblShotDir.setWordWrap(True)
         labellayout.addWidget(self.lblShotDir)
 
+        self.lblArchiveWarning = QtWidgets.QLabel("⚠ Custom filename — data will NOT be archived")
+        self.lblArchiveWarning.setStyleSheet("color: #c0392b; font-weight: bold;")
+        self.lblArchiveWarning.setVisible(False)
+        labellayout.addWidget(self.lblArchiveWarning)
+
         Clear = QtWidgets.QPushButton("Update Table")
         Clear.clicked.connect(partial(self.update_table))
         self.gridLayout.addWidget(Clear, 3, 2, 1, 1)
@@ -1415,6 +1420,7 @@ class OscApp(QtWidgets.QMainWindow):
             self.lblShotDir.setText(f"{self.save_dir}  ⚠ not found")
             self.lblShotDir.setStyleSheet("color: #c0392b;")
         self.lblShotName.setText(str(self.shot_name))
+        self.lblArchiveWarning.setVisible(self.archiving_enabled and not self.standard_name)
 
     # ── Platform / directory logic ───────────────────────────────────────────
     def change_platform(self):
@@ -1520,12 +1526,19 @@ class OscApp(QtWidgets.QMainWindow):
             return shot[-3:]
 
     def copy_user_to_gun(self, update_shot=False):
+        dest_dir = os.path.join(self.shot_dir, self.shot_name)
         for file in os.listdir(self.save_dir_lower):
             if os.path.isfile(os.path.join(self.save_dir_lower, file)):
-                if self.save_dir_lower != os.path.join(self.shot_dir, self.shot_name):
+                if self.save_dir_lower != dest_dir:
                     if file[:2] != '~$':
+                        dest_name = file
+                        increment = 0
+                        p = Path(file)
+                        while os.path.isfile(os.path.join(dest_dir, dest_name)):
+                            increment += 1
+                            dest_name = f"{p.stem}_{increment}{p.suffix}"
                         shutil.copy(os.path.join(self.save_dir_lower, file),
-                                    os.path.join(self.shot_dir, self.shot_name))
+                                    os.path.join(dest_dir, dest_name))
         if update_shot and self.standard_name:
             self.change_platform()
 
@@ -1818,10 +1831,11 @@ class OscApp(QtWidgets.QMainWindow):
             self._finalize_save()
 
     def _finalize_save(self):
+        cancelled = hasattr(self, '_save_cancel') and self._save_cancel.is_set()
         if hasattr(self, '_save_progress') and self._save_progress:
+            self._save_progress.canceled.disconnect(self._cancel_save)
             self._save_progress.close()
             self._save_progress = None
-        cancelled = hasattr(self, '_save_cancel') and self._save_cancel.is_set()
         print("Done saving data! %s" % datetime.datetime.now().strftime("%I:%M%p (%m/%d/%y)"))
         if self._save_failures:
             failstr = "***These Scopes/Channels did not save!***:\n" + "\n".join(self._save_failures)
@@ -1845,15 +1859,13 @@ class OscApp(QtWidgets.QMainWindow):
             else:
                 save_dir = self.save_dir
 
+        p = Path(filename)
         updated_filename = filename
         increment = 0
         while os.path.isfile(os.path.join(save_dir, updated_filename)):
             increment += 1
             print(updated_filename + ' Exists.')
-            if increment == 1:
-                updated_filename = updated_filename[:-4] + '_1.isf'
-            else:
-                updated_filename = updated_filename[:-(4 + len(str(increment - 1)))] + str(increment) + '.isf'
+            updated_filename = f"{p.stem}_{increment}{p.suffix}"
 
         for attempt in range(5):
             if cancel_event is not None and cancel_event.is_set():
