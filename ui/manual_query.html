@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VOBB Timing Tool &mdash; Manual</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #333;
+      background: #fff;
+      padding: 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #222;
+      font-size: 1.6em;
+      border-bottom: 3px solid #0077aa;
+      padding-bottom: 10px;
+      margin-bottom: 6px;
+    }
+    .meta {
+      color: #666;
+      font-size: 0.85em;
+      margin-bottom: 20px;
+    }
+    h2 {
+      color: #0077aa;
+      font-size: 1.1em;
+      margin-top: 28px;
+      margin-bottom: 12px;
+      border-left: 4px solid #0077aa;
+      padding-left: 10px;
+    }
+    h3 {
+      color: #333;
+      font-size: 1em;
+      margin-top: 18px;
+      margin-bottom: 8px;
+    }
+    p { margin-bottom: 12px; }
+    ul, ol { margin: 6px 0 12px 22px; }
+    li { margin-bottom: 5px; }
+    code {
+      background: #f4f4f4;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-family: "Cascadia Code", "Consolas", "Courier New", monospace;
+      font-size: 0.9em;
+      color: #c7254e;
+    }
+    pre {
+      background: #f8f8f8;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 12px 14px;
+      margin: 8px 0 14px;
+      overflow-x: auto;
+      font-family: "Cascadia Code", "Consolas", "Courier New", monospace;
+      font-size: 0.88em;
+      line-height: 1.45;
+    }
+    pre code { background: none; border: none; padding: 0; color: #333; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 16px;
+      border: 1px solid #ddd;
+    }
+    th {
+      background: #f0f0f0;
+      border: 1px solid #ddd;
+      padding: 9px 12px;
+      text-align: left;
+      font-weight: 600;
+      color: #222;
+      font-size: 0.92em;
+    }
+    td {
+      border: 1px solid #e0e0e0;
+      padding: 8px 12px;
+      font-size: 0.92em;
+    }
+    tr:nth-child(even) td { background: #f9f9f9; }
+    .toc {
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 14px 18px;
+      margin-bottom: 24px;
+    }
+    .toc strong { display: block; margin-bottom: 8px; color: #222; }
+    .toc ul { list-style: none; margin-left: 0; }
+    .toc li { margin-bottom: 4px; }
+    .toc a { color: #0077aa; text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    a { color: #0077aa; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .note {
+      background: #e8f4f8;
+      border-left: 4px solid #0077aa;
+      padding: 10px 14px;
+      margin: 10px 0;
+      border-radius: 0 4px 4px 0;
+      font-size: 0.92em;
+    }
+    .note strong { color: #0077aa; }
+    .chip {
+      display: inline;
+      border-radius: 3px;
+      padding: 1px 6px;
+      font-size: 0.82em;
+      font-weight: 700;
+      font-family: monospace;
+    }
+    .ch1 { background: #555500; color: #ffff00; }
+    .ch2 { background: #004455; color: #00d8f0; }
+    .ch3 { background: #550022; color: #ff6699; }
+    .ch4 { background: #1a4a30; color: #69f0ae; }
+    hr { border: none; border-top: 1px solid #ddd; margin: 28px 0 0; }
+    .footer { color: #888; font-size: 0.88em; margin-top: 12px; }
+  </style>
+</head>
+<body>
+
+<h1>VOBB Timing Tool</h1>
+<div class="meta">Version 1.0 &nbsp;&middot;&nbsp; Written 2026-05-29 &nbsp;&middot;&nbsp; DCS &mdash; Dynamic Compression Sector</div>
+
+<div class="toc">
+  <strong>Contents</strong>
+  <ul>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#prerequisites">Prerequisites</a></li>
+    <li><a href="#launch">Launching</a></li>
+    <li><a href="#workflow">Step-by-Step Workflow</a></li>
+    <li><a href="#waveform">Waveform View</a></li>
+    <li><a href="#excel">Excel Output</a></li>
+    <li><a href="#scope-setup">Scope Measurement Setup</a></li>
+    <li><a href="#troubleshooting">Troubleshooting</a></li>
+  </ul>
+</div>
+
+<h2 id="overview">Overview</h2>
+<p>
+  The VOBB Timing Tool reads four inter-channel delay measurements from a single Tektronix
+  oscilloscope over TCP/IP and writes the values into fixed cells in an Excel template.
+  It is designed for VOBB timing shots where the delays between channels
+  (<span class="chip ch1">CH1</span>&rarr;<span class="chip ch2">CH2</span>,
+   <span class="chip ch2">CH2</span>&rarr;<span class="chip ch3">CH3</span>,
+   <span class="chip ch3">CH3</span>&rarr;<span class="chip ch4">CH4</span>,
+   <span class="chip ch1">CH1</span>&rarr;<span class="chip ch4">CH4</span>)
+  are recorded shot-by-shot into a structured spreadsheet.
+</p>
+<p>
+  The tool connects directly to the scope&rsquo;s LAN port &mdash; no GPIB adapter or
+  front-panel interaction is needed after the scope is initially configured.
+</p>
+
+<h2 id="prerequisites">Prerequisites</h2>
+<ul>
+  <li><strong>Microsoft Excel</strong> &mdash; required for auto-detect and write features (COM interface).</li>
+  <li><strong>VISA driver</strong> (optional but recommended) &mdash; NI-VISA or Keysight IO Libraries for fast waveform transfer. The app falls back to <code>pyvisa-py</code> automatically if no native driver is found.</li>
+  <li><strong>Conda environment</strong> &mdash; managed automatically by the launcher (<code>run-scope-query.bat</code>).</li>
+</ul>
+
+<h2 id="launch">Launching</h2>
+<p>Double-click <code>run-scope-query.bat</code> in the repository folder. On first run it:</p>
+<ol>
+  <li>Pulls the latest code from GitHub.</li>
+  <li>Creates or updates the <code>scope_control</code> Conda environment.</li>
+  <li>Installs <code>xlwings</code> and <code>pywin32</code> if missing.</li>
+  <li>Creates a <strong>VOBB Timing Tool</strong> shortcut on your Desktop.</li>
+  <li>Starts the application.</li>
+</ol>
+<p>Use the Desktop shortcut for all subsequent launches.</p>
+
+<h2 id="workflow">Step-by-Step Workflow</h2>
+
+<h3>1. Enter the Scope IP</h3>
+<p>
+  Type the oscilloscope&rsquo;s IP address into the <strong>Scope IP</strong> field.
+  The last-used address is remembered and restored automatically on the next launch.
+  Find the IP on the scope under <em>Utility &rarr; I/O &rarr; LAN</em>.
+</p>
+
+<h3>2. Pull Measurements</h3>
+<p>
+  Click <strong>Pull Measurements</strong>. The tool connects over TCP/IP and reads MEAS1&ndash;MEAS4
+  (value, units, and measurement type). Results appear in the text area:
+</p>
+<pre>Connected: TEKTRONIX,MSO54,C012345,CF:91.1CT FV:1.24.0.5874
+
+MEAS1 (DELay): 1.234e-08 s
+MEAS2 (DELay): 9.870e-09 s
+MEAS3 (DELay): 1.102e-08 s
+MEAS4 (DELay): 3.321e-08 s</pre>
+<p>After a successful pull, the Excel save controls appear below the buttons.</p>
+
+<h3>3. Save to Excel</h3>
+<p>See <a href="#excel">Excel Output</a> below for full details. In brief:</p>
+<ol>
+  <li>If an Excel workbook with VOBB anchor cells is already open, it is selected automatically.</li>
+  <li>Otherwise click <strong>Select output .xlsx</strong> to browse.</li>
+  <li>Click <strong>Save to &hellip;\filename.xlsx</strong> to write the values.</li>
+</ol>
+
+<h3>4. Show Waveform (optional)</h3>
+<p>
+  Click <strong>Show Waveform</strong> at any time to fetch all four channels and open the
+  waveform plot. See <a href="#waveform">Waveform View</a> for details.
+  This step is independent of pulling measurements.
+</p>
+
+<h2 id="waveform">Waveform View</h2>
+<p>
+  Fetches the full waveform record from all four channels and displays them in a live,
+  interactive plot window.
+</p>
+<ul>
+  <li>All channels are shifted so the 50% falling edge of <span class="chip ch1">CH1</span> is at t&nbsp;=&nbsp;0.</li>
+  <li>A dashed yellow vertical line marks t&nbsp;=&nbsp;0.</li>
+  <li>Additional vertical lines mark each measured delay, colored to match the delayed channel.</li>
+  <li>The horizontal axis is auto-zoomed to the region of interest, using the average inter-channel delay as padding.</li>
+  <li>Pan and zoom interactively by clicking/dragging and scrolling.</li>
+</ul>
+
+<table>
+  <thead><tr><th>Channel</th><th>Color</th><th>Timing line position</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><span class="chip ch1">CH1</span></td>
+      <td>Yellow</td>
+      <td>t = 0 &mdash; reference (50% falling edge)</td>
+    </tr>
+    <tr>
+      <td><span class="chip ch2">CH2</span></td>
+      <td>Cyan</td>
+      <td>MEAS1 (CH1 &rarr; CH2 delay)</td>
+    </tr>
+    <tr>
+      <td><span class="chip ch3">CH3</span></td>
+      <td>Pink</td>
+      <td>MEAS1 + MEAS2 (CH1 &rarr; CH3 sequential)</td>
+    </tr>
+    <tr>
+      <td><span class="chip ch4">CH4</span></td>
+      <td>Green</td>
+      <td>MEAS1 + MEAS2 + MEAS3 (CH1 &rarr; CH4 sequential)<br>and MEAS4 (CH1 &rarr; CH4 direct) &mdash; dashed</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <strong>Note:</strong> Waveform fetch takes several seconds per channel due to full-record transfer
+  over TCP/IP. The button label updates to show which channel is currently being fetched.
+</div>
+
+<h2 id="excel">Excel Output</h2>
+
+<h3>Auto-detect</h3>
+<p>
+  On startup and after each <strong>Pull Measurements</strong>, the tool scans all open Excel
+  workbooks (up to 5) for VOBB anchor cells. If exactly one workbook contains the anchors,
+  it is selected automatically and the save button activates &mdash; no manual selection needed.
+</p>
+<p>Auto-detect is skipped if Excel is not running or more than 5 workbooks are open.</p>
+
+<h3>Manual selection</h3>
+<p>
+  Click <strong>Select output .xlsx</strong>. The dialog opens to the last-used directory.
+  The selected path is persisted across sessions.
+</p>
+
+<h3>How values are written</h3>
+<p>
+  The tool searches the first sheet for anchor text cells. The labeled-row layout takes priority
+  if both patterns are present.
+</p>
+<table>
+  <thead><tr><th>Anchor text</th><th>Value written to</th><th>Measurement</th></tr></thead>
+  <tbody>
+    <tr><td><code>1 to 2</code></td><td>Cell immediately to the right</td><td>MEAS1 &mdash; CH1&rarr;CH2 delay</td></tr>
+    <tr><td><code>2 to 3</code></td><td>Cell immediately to the right</td><td>MEAS2 &mdash; CH2&rarr;CH3 delay</td></tr>
+    <tr><td><code>3 to 4</code></td><td>Cell immediately to the right</td><td>MEAS3 &mdash; CH3&rarr;CH4 delay</td></tr>
+    <tr><td><code>1 to 4</code></td><td>Cell immediately to the right</td><td>MEAS4 &mdash; CH1&rarr;CH4 direct delay</td></tr>
+    <tr><td><code>VOBB</code> (fallback)</td><td>4 cells directly below, one per measurement</td><td>MEAS1&ndash;4 in order</td></tr>
+  </tbody>
+</table>
+<p>
+  If target cells already contain data, a confirmation dialog asks before overwriting.
+  If no anchor text is found, a warning is shown and nothing is written.
+</p>
+<div class="note">
+  <strong>Note:</strong> Anchor text is case-sensitive and must match exactly &mdash; no extra spaces.
+  Values are written as raw numbers (seconds); formatting is controlled by the Excel template.
+</div>
+
+<h2 id="scope-setup">Scope Measurement Setup</h2>
+<p>
+  The scope must have four delay measurements configured before pulling.
+  On a Tektronix MSO/DPO, press <strong>Measure</strong> on the front panel and configure
+  MEAS1&ndash;4 as follows:
+</p>
+<table>
+  <thead><tr><th>Slot</th><th>Measurement type</th><th>Source (delayed)</th><th>Reference</th></tr></thead>
+  <tbody>
+    <tr><td>MEAS1</td><td>Delay</td><td><span class="chip ch2">CH2</span></td><td><span class="chip ch1">CH1</span></td></tr>
+    <tr><td>MEAS2</td><td>Delay</td><td><span class="chip ch3">CH3</span></td><td><span class="chip ch2">CH2</span></td></tr>
+    <tr><td>MEAS3</td><td>Delay</td><td><span class="chip ch4">CH4</span></td><td><span class="chip ch3">CH3</span></td></tr>
+    <tr><td>MEAS4</td><td>Delay</td><td><span class="chip ch4">CH4</span></td><td><span class="chip ch1">CH1</span></td></tr>
+  </tbody>
+</table>
+<p>
+  The tool reads whatever value is in each slot &mdash; it does not reconfigure the scope.
+  Only <code>DELay</code> and <code>PHAse</code> measurements are plotted as timing markers
+  in the waveform view; other types are still read and saved.
+</p>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+
+<h3>&ldquo;VOBB timing cells not found in selected .xlsx&rdquo;</h3>
+<p>
+  The workbook does not contain the expected anchor text on the first sheet. Confirm that cells
+  with the exact text <code>VOBB</code>, <code>1 to 2</code>, <code>2 to 3</code>,
+  <code>3 to 4</code>, or <code>1 to 4</code> exist. Text must match exactly (case-sensitive,
+  no extra spaces).
+</p>
+
+<h3>Auto-detect does not find the workbook</h3>
+<p>
+  Auto-detect is skipped when Excel is not running or when more than 5 workbooks are open.
+  Use <strong>Select output .xlsx</strong> to set the path manually.
+</p>
+
+<h3>Connection timeout / scope not found</h3>
+<p>
+  Verify the IP address is correct and the scope is powered on with LAN enabled.
+  Default timeout is 10 seconds. Check the scope&rsquo;s LAN settings under
+  <em>Utility &rarr; I/O &rarr; LAN</em>.
+</p>
+
+<h3>Import error for <code>xlwings</code> or <code>win32com</code></h3>
+<p>These are installed automatically by the launcher. If running the script directly:</p>
+<pre>pip install xlwings pywin32</pre>
+
+<h3>Conda not found at launch</h3>
+<p>Ensure Miniconda or Anaconda is installed, then run once from an Anaconda prompt:</p>
+<pre>conda init powershell</pre>
+<p>Restart your terminal and try again.</p>
+
+<hr>
+<p class="footer"><strong>Document Version:</strong> 1.0 &nbsp;&nbsp; <strong>Last Updated:</strong> May 2026</p>
+
+</body>
+</html>
